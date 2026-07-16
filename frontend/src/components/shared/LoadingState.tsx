@@ -1,0 +1,32 @@
+/**
+ * 公共组件 - 加载状态
+ */
+import { Spin, Typography } from 'antd';
+
+const { Text } = Typography;
+
+interface LoadingStateProps {
+  tip?: string;
+  size?: 'small' | 'default' | 'large';
+  fullScreen?: boolean;
+}
+
+export function LoadingState({ tip = '加载中...', size = 'default', fullScreen = false }: LoadingStateProps) {
+  if (fullScreen) {
+    return (
+      <div
+        style={{
+          width: '100vw',
+          height: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Spin size={size} tip={tip} />
+      </div>
+    );
+  }
+
+  return <Spin size={size} tip={tip} />;
+}
