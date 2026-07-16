@@ -12,3 +12,6 @@ router = APIRouter()
 # - POST /refresh - 鍒锋柊浠ょ墝
 # - POST /logout - 鐧诲嚭
 # - GET /me - 鑾峰彇褰撳墠鐢ㄦ埛
+
+auth_router = router  # 公共导出别名，成员1评审
+

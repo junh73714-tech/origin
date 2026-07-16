@@ -65,9 +65,11 @@ class AuditMixin:
 
 
 class BaseModel(Base, TimestampMixin, TenantMixin, AuditMixin):
-    """基础模型"""
+    """基础模型。新增 id 主键以对齐迁移表结构，需成员1评审。"""
 
     __abstract__ = True
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
 
     def to_dict(self, exclude: list[str] | None = None) -> dict[str, Any]:
         """转换为字典"""

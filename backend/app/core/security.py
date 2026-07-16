@@ -92,7 +92,8 @@ def verify_token(token: str, token_type: str = "access") -> dict[str, Any] | Non
 class AccessContext:
     """
     访问上下文
-    包含当前请求的用户信息和权限范围
+    包含当前请求的用户信息和权限范围。
+    扩展字段（scope_hash 等）兼容成员4/6契约，需成员1/4确认。
     """
 
     def __init__(
@@ -102,15 +103,37 @@ class AccessContext:
         roles: list[str],
         permissions: list[str],
         data_scopes: dict[str, list[str]] | None = None,
+        role_ids: list[str] | None = None,
+        department_ids: list[str] | None = None,
+        group_ids: list[str] | None = None,
+        knowledge_base_ids: list[str] | None = None,
+        project_ids: list[str] | None = None,
+        regions: list[str] | None = None,
+        max_confidentiality_level: int = 0,
+        deny_document_ids: list[str] | None = None,
+        temporary_grants: list[dict[str, Any]] | None = None,
+        scope_hash: str = "",
     ):
         self.user_id = user_id
         self.tenant_id = tenant_id
         self.roles = roles
         self.permissions = permissions
         self.data_scopes = data_scopes or {}
+        self.role_ids = role_ids or []
+        self.department_ids = department_ids or []
+        self.group_ids = group_ids or []
+        self.knowledge_base_ids = knowledge_base_ids or []
+        self.project_ids = project_ids or []
+        self.regions = regions or []
+        self.max_confidentiality_level = max_confidentiality_level
+        self.deny_document_ids = deny_document_ids or []
+        self.temporary_grants = temporary_grants or []
+        self.scope_hash = scope_hash
 
     def has_permission(self, permission: str) -> bool:
-        """检查是否具有指定权限"""
+        """检查是否具有指定权限（* 仅表示功能权限通配，不表示数据权限放行）"""
+        if "*" in self.permissions:
+            return True
         return permission in self.permissions
 
     def has_role(self, role: str) -> bool:
@@ -147,6 +170,16 @@ class AccessContext:
             "roles": self.roles,
             "permissions": self.permissions,
             "data_scopes": self.data_scopes,
+            "role_ids": self.role_ids,
+            "department_ids": self.department_ids,
+            "group_ids": self.group_ids,
+            "knowledge_base_ids": self.knowledge_base_ids,
+            "project_ids": self.project_ids,
+            "regions": self.regions,
+            "max_confidentiality_level": self.max_confidentiality_level,
+            "deny_document_ids": self.deny_document_ids,
+            "temporary_grants": self.temporary_grants,
+            "scope_hash": self.scope_hash,
         }
 
     @classmethod
@@ -158,6 +191,16 @@ class AccessContext:
             roles=data.get("roles", []),
             permissions=data.get("permissions", []),
             data_scopes=data.get("data_scopes", {}),
+            role_ids=data.get("role_ids", []),
+            department_ids=data.get("department_ids", []),
+            group_ids=data.get("group_ids", []),
+            knowledge_base_ids=data.get("knowledge_base_ids", []),
+            project_ids=data.get("project_ids", []),
+            regions=data.get("regions", []),
+            max_confidentiality_level=int(data.get("max_confidentiality_level", 0) or 0),
+            deny_document_ids=data.get("deny_document_ids", []),
+            temporary_grants=data.get("temporary_grants", []),
+            scope_hash=data.get("scope_hash", "") or "",
         )
 
     @classmethod

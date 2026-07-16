@@ -12,3 +12,6 @@ router = APIRouter()
 # - DELETE /{document_id} - åˆ é™¤æ–‡æ¡£
 # - GET /{document_id}/versions - è·å–æ–‡æ¡£ç‰ˆæœ¬
 # - POST /{document_id}/versions - åˆ›å»ºæ–°ç‰ˆæœ¬
+
+documents_router = router  # ¹«¹²µ¼³ö±ğÃû£¬³ÉÔ±1ÆÀÉó
+

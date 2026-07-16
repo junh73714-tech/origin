@@ -151,16 +151,16 @@ class AppSettings(BaseSettings):
     log_level: str = "INFO"
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
-    # 子配置
-    database = DatabaseSettings()
-    redis = RedisSettings()
-    minio = MinIOSettings()
-    opensearch = OpenSearchSettings()
-    llm = LLMSettings()
-    embedding = EmbeddingSettings()
-    reranker = RerankerSettings()
-    celery = CelerySettings()
-    security = SecuritySettings()
+    # 子配置（需类型注解以兼容 Pydantic v2，公共变更标记成员1评审）
+    database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+    redis: RedisSettings = Field(default_factory=RedisSettings)
+    minio: MinIOSettings = Field(default_factory=MinIOSettings)
+    opensearch: OpenSearchSettings = Field(default_factory=OpenSearchSettings)
+    llm: LLMSettings = Field(default_factory=LLMSettings)
+    embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
+    reranker: RerankerSettings = Field(default_factory=RerankerSettings)
+    celery: CelerySettings = Field(default_factory=CelerySettings)
+    security: SecuritySettings = Field(default_factory=SecuritySettings)
 
     @field_validator("log_level")
     @classmethod

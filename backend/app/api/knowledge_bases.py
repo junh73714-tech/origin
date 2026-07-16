@@ -13,3 +13,6 @@ router = APIRouter()
 # - PUT /{kb_id} - æ›´æ–°çŸ¥è¯†åº“
 # - DELETE /{kb_id} - åˆ é™¤çŸ¥è¯†åº“
 # - GET /{kb_id}/stats - è·å–çŸ¥è¯†åº“ç»Ÿè®¡
+
+knowledge_bases_router = router  # ¹«¹²µ¼³ö±ğÃû£¬³ÉÔ±1ÆÀÉó
+
