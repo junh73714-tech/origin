@@ -53,17 +53,19 @@ export const PermissionAudit = createPlaceholderPage('权限审计', '权限使�
 export const DocVersionManage = createPlaceholderPage('文档版本', '文档版本历史与切换');
 export const ChunkView = createPlaceholderPage('Chunk 查看', '文档分块内容查看');
 
-// ========== 问答优化 ==========
+// ========== M3: 问答优化（已实现） ==========
+export { PendingReview } from './PendingReview';
+
+// ========== M3: 检索调试（已实现） ==========
+export { SearchDebug } from './SearchDebug';
+
+// ========== M3 剩余：问答优化 ==========
 export const CandidateQA = createPlaceholderPage('候选问答', '自动生成的候选问答列表');
-export const PendingReview = createPlaceholderPage('待审核问答', '问答审核（通过/驳回/返回修改）');
 export const StandardQA = createPlaceholderPage('标准问答', '已发布的标准问答管理');
 export const SimilarQuestions = createPlaceholderPage('相似问句', '相似问句管理');
 export const FrequentQuestions = createPlaceholderPage('高频问题', '高频问题统计');
 export const UnmatchedQuestions = createPlaceholderPage('未命中问题', '未命中问题处理');
 export const LowQualityAnswers = createPlaceholderPage('低质量答案', '低质量答案分析与改进');
-
-// ========== 检索调试 ==========
-export const SearchDebug = createPlaceholderPage('检索调试', '检索过程调试与结果分析');
 
 // ========== 评估中心 ==========
 export const EvalDatasets = createPlaceholderPage('Golden Dataset', '评估数据集管理');
