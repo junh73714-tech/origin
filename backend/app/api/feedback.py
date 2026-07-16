@@ -1,4 +1,5 @@
 """
+<<<<<<< HEAD
 反馈与运营路由（成员7）
 提供用户反馈提交、未命中问题、高频问题、低质量答案、知识缺口等运营接口
 """
@@ -461,3 +462,15 @@ async def get_knowledge_gaps(
             "gaps": gaps[:top_n],
         }
     )
+=======
+反馈路由占位
+由成员7实现
+"""
+from fastapi import APIRouter
+
+router = APIRouter()
+
+# TODO: 由成员7实现
+# - POST / - 提交反馈
+# - GET /message/{message_id} - 获取消息的反馈
+>>>>>>> 8de89ee904f686dbe7d52e3b35cdc79ef917eeb2

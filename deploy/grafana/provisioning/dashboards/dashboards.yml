@@ -9,4 +9,8 @@ providers:
     disableDeletion: false
     editable: true
     options:
+<<<<<<< HEAD
       path: /etc/grafana/provisioning/dashboards/json
+=======
+      path: /etc/grafana/provisioning/dashboards
+>>>>>>> 8de89ee904f686dbe7d52e3b35cdc79ef917eeb2

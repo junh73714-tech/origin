@@ -60,6 +60,7 @@ def create_app() -> FastAPI:
 
 def register_routes(app: FastAPI) -> None:
     """注册路由"""
+<<<<<<< HEAD
     from app.api.common.health import router as health_router
     from app.api.auth import router as auth_router
     from app.api.documents import router as documents_router
@@ -67,6 +68,15 @@ def register_routes(app: FastAPI) -> None:
     from app.api.knowledge_bases import router as knowledge_bases_router
     from app.api.qa import router as qa_router
     from app.api.feedback import router as feedback_router
+=======
+    from app.api.common import health_router
+    from app.api.auth import auth_router
+    from app.api.documents import documents_router
+    from app.api.chunks import chunks_router
+    from app.api.knowledge_bases import knowledge_bases_router
+    from app.api.qa import qa_router
+    from app.api.feedback import feedback_router
+>>>>>>> 8de89ee904f686dbe7d52e3b35cdc79ef917eeb2
 
     # 健康检查
     app.include_router(health_router, prefix="/api/v1", tags=["健康检查"])
@@ -89,6 +99,7 @@ def register_routes(app: FastAPI) -> None:
     # 反馈
     app.include_router(feedback_router, prefix="/api/v1/feedback", tags=["反馈"])
 
+<<<<<<< HEAD
     # 评估
     from app.api.evaluation import router as evaluation_router
     app.include_router(evaluation_router, prefix="/api/v1", tags=["评估"])
@@ -98,6 +109,8 @@ def register_routes(app: FastAPI) -> None:
     init_monitoring(settings.app.name, "0.1.0")
     app.add_route("/metrics", metrics_endpoint, methods=["GET"])
 
+=======
+>>>>>>> 8de89ee904f686dbe7d52e3b35cdc79ef917eeb2
 
 def register_exception_handlers(app: FastAPI) -> None:
     """注册异常处理器"""
