@@ -151,6 +151,14 @@ class IndexingService:
             "page_end": chunk.page_end,
             "token_count": chunk.token_count,
             "status": chunk.status,
+            "is_current_version": version.is_current_version,
+            "document_status": version.publish_status,
+            "effective_time": (
+                version.effective_time.isoformat() if version.effective_time else None
+            ),
+            "expiration_time": (
+                version.expiration_time.isoformat() if version.expiration_time else None
+            ),
             "permission_metadata": chunk.permission_metadata or {},
             "created_at": (
                 chunk.created_at.isoformat() if chunk.created_at else None
