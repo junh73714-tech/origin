@@ -306,6 +306,23 @@ GET /api/v1/qa/conversations
 GET /api/v1/qa/conversations/{conversation_id}
 ```
 
+### 5.8 获取引用详情（成员6，待成员1签收）
+```
+GET /api/v1/qa/citations/{citation_id}
+```
+
+不返回 MinIO 真实地址或内部存储路径。
+
+### 5.9 取消查询（成员6，待成员1签收）
+```
+POST /api/v1/qa/queries/{query_id}/cancel
+```
+
+### 5.10 检索调试（成员6，后台权限，待成员1/3签收）
+```
+POST /api/v1/qa/debug/query
+```
+
 ## 6. 反馈接口
 
 ### 6.1 提交反馈
