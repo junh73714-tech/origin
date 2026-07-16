@@ -304,9 +304,9 @@ class RetrievalFilter(BaseSchema):
     """检索过滤条件"""
     tenant_id: str
     user_id: str
-    allowed_knowledge_base_ids: list[str]
-    allowed_department_ids: list[str]
-    allowed_group_ids: list[str]
+    knowledge_base_ids: list[str]
+    department_ids: list[str]
+    group_ids: list[str]
     max_confidentiality_level: int
     deny_document_ids: list[str]
     effective_temporary_grants: list[TemporaryGrantInfo]

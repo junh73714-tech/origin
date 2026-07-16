@@ -50,21 +50,44 @@ class PermissionService:
         role_ids = [role.id for role in user.roles]
         department_ids = [dept.id for dept in user.departments]
         group_ids = [group.id for group in user.groups]
+        roles = [role.code for role in user.roles]
+        permissions = [perm.code for role in user.roles for perm in role.permissions]
 
         knowledge_base_ids = await self._get_allowed_knowledge_base_ids(user)
         max_confidentiality_level = await self._get_max_confidentiality_level(user)
         deny_document_ids = await self._get_deny_document_ids(user)
         temporary_grants = await self._get_active_temporary_grants(user_id)
 
+        data_scopes = {
+            "knowledge_base": knowledge_base_ids,
+            "document": [],
+        }
+
+        temp_grant_entries = sorted(
+            {
+                f"{g.resource_id}:{g.expiration_time.isoformat()}"
+                for g in temporary_grants
+            }
+        )
+
         scope_data = {
             "tenant_id": user.tenant_id,
             "user_id": user.id,
+            "roles": sorted(roles),
+            "permissions": sorted(permissions),
+            "data_scopes": {
+                k: sorted(v) if isinstance(v, list) else v
+                for k, v in sorted(data_scopes.items())
+            },
             "role_ids": sorted(role_ids),
             "department_ids": sorted(department_ids),
             "group_ids": sorted(group_ids),
             "knowledge_base_ids": sorted(knowledge_base_ids),
+            "project_ids": [],
+            "regions": [],
             "max_confidentiality_level": max_confidentiality_level,
             "deny_document_ids": sorted(deny_document_ids),
+            "temporary_grants": temp_grant_entries,
         }
 
         scope_hash = self._compute_scope_hash(scope_data)
@@ -103,9 +126,9 @@ class PermissionService:
         return RetrievalFilter(
             tenant_id=context.tenant_id,
             user_id=context.user_id,
-            allowed_knowledge_base_ids=context.knowledge_base_ids,
-            allowed_department_ids=context.department_ids,
-            allowed_group_ids=context.group_ids,
+            knowledge_base_ids=context.knowledge_base_ids,
+            department_ids=context.department_ids,
+            group_ids=context.group_ids,
             max_confidentiality_level=context.max_confidentiality_level,
             deny_document_ids=context.deny_document_ids,
             effective_temporary_grants=[
@@ -124,9 +147,9 @@ class PermissionService:
 
         must_clauses.append({"term": {"tenant_id": filters.tenant_id}})
 
-        if filters.allowed_knowledge_base_ids:
+        if filters.knowledge_base_ids:
             must_clauses.append(
-                {"terms": {"knowledge_base_id": filters.allowed_knowledge_base_ids}}
+                {"terms": {"knowledge_base_id": filters.knowledge_base_ids}}
             )
 
         if filters.max_confidentiality_level > 0:
@@ -155,9 +178,9 @@ class PermissionService:
 
         conditions.append("tenant_id = :tenant_id")
 
-        if filters.allowed_knowledge_base_ids:
-            conditions.append(f"knowledge_base_id IN ({','.join([':kb_' + str(i) for i in range(len(filters.allowed_knowledge_base_ids))])})")
-            for i, kb_id in enumerate(filters.allowed_knowledge_base_ids):
+        if filters.knowledge_base_ids:
+            conditions.append(f"knowledge_base_id IN ({','.join([':kb_' + str(i) for i in range(len(filters.knowledge_base_ids))])})")
+            for i, kb_id in enumerate(filters.knowledge_base_ids):
                 params[f"kb_{i}"] = kb_id
 
         if filters.max_confidentiality_level > 0:
@@ -198,10 +221,6 @@ class PermissionService:
         if not user:
             return False
 
-        for role in user.roles:
-            if role.code == "super_admin":
-                return True
-
         kb_permissions = await self._get_knowledge_base_permissions(knowledge_base_id)
 
         deny_rules = [p for p in kb_permissions if p.is_deny]
@@ -222,10 +241,6 @@ class PermissionService:
         user = await self._get_user_with_relations(user_id)
         if not user:
             return False
-
-        for role in user.roles:
-            if role.code == "super_admin":
-                return True
 
         doc_permissions = await self._get_document_permissions(document_id)
 
