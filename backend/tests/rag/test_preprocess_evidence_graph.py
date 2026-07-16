@@ -1,6 +1,6 @@
 """预处理、证据与问答图测试。"""
 from app.core.security import AccessContext
-from app.providers.embedding.provider import DeterministicEmbeddingProvider
+from app.providers.deterministic_embedding import DeterministicEmbeddingProvider
 from app.rag.evidence import assess_evidence
 from app.rag.graph import QAGraph
 from app.rag.preprocess import preprocess, query_rewrite

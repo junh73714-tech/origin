@@ -22,7 +22,7 @@ from app.core.logging import get_logger
 from app.core.responses import paginated_response, success_response
 from app.core.security import AccessContext
 from app.prompts.qa_system import PROMPT_VERSION
-from app.providers.embedding.provider import get_embedding_provider
+from app.providers.deterministic_embedding import get_embedding_provider
 from app.providers.llm.provider import get_llm_provider
 from app.providers.reranker.provider import get_reranker_provider
 from app.rag.graph import QAGraph

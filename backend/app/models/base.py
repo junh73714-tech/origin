@@ -2,6 +2,7 @@
 公共模型基类
 定义所有数据模型的公共字段
 """
+import uuid
 from datetime import datetime
 from typing import Any
 
@@ -9,6 +10,11 @@ from sqlalchemy import DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
+
+
+def generate_id() -> str:
+    """生成唯一ID（32位UUID，去连字符）"""
+    return uuid.uuid4().hex
 
 
 class TimestampMixin:
@@ -65,11 +71,16 @@ class AuditMixin:
 
 
 class BaseModel(Base, TimestampMixin, TenantMixin, AuditMixin):
-    """基础模型。新增 id 主键以对齐迁移表结构，需成员1评审。"""
+    """基础模型 -- 所有业务模型的基类"""
 
     __abstract__ = True
 
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    id: Mapped[str] = mapped_column(
+        String(64),
+        primary_key=True,
+        default=generate_id,
+        comment="主键ID",
+    )
 
     def to_dict(self, exclude: list[str] | None = None) -> dict[str, Any]:
         """转换为字典"""

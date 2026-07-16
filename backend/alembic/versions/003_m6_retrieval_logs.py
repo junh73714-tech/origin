@@ -1,7 +1,7 @@
 """成员6：Citation / QueryLog / RetrievalLog 表
 
-Revision ID: 002
-Revises: 001
+Revision ID: 003
+Revises: 002（成员5 models）
 """
 
 from __future__ import annotations
@@ -10,8 +10,8 @@ import alembic.op as op
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 
-revision = "002"
-down_revision = "001"
+revision = "003"
+down_revision = "002"
 branch_labels = None
 depends_on = None
 

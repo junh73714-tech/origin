@@ -4,24 +4,24 @@
 """
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Table, Text
+from sqlalchemy import Column, DateTime, ForeignKey, String, Table, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
 
-# 关联表
+# 关联表（使用 Column 而非 mapped_column，Table 不接受 MappedColumn）
 user_roles = Table(
     "user_roles",
     BaseModel.metadata,
-    mapped_column("user_id", String(64), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
-    mapped_column("role_id", String(64), ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", String(64), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    Column("role_id", String(64), ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True),
 )
 
 role_permissions = Table(
     "role_permissions",
     BaseModel.metadata,
-    mapped_column("role_id", String(64), ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True),
-    mapped_column("permission_id", String(64), ForeignKey("permissions.id", ondelete="CASCADE"), primary_key=True),
+    Column("role_id", String(64), ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True),
+    Column("permission_id", String(64), ForeignKey("permissions.id", ondelete="CASCADE"), primary_key=True),
 )
 
 

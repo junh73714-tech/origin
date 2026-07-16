@@ -1,6 +1,6 @@
 """权限过滤与混合检索测试。"""
 from app.core.security import AccessContext
-from app.providers.embedding.provider import DeterministicEmbeddingProvider
+from app.providers.deterministic_embedding import DeterministicEmbeddingProvider
 from app.retrieval.keyword import InMemoryKeywordIndex, KeywordRetriever
 from app.retrieval.permission_adapter import DefaultPermissionAdapter, compute_scope_hash
 from app.retrieval.service import HybridRetrievalService

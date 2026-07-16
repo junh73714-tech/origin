@@ -1,0 +1,58 @@
+/**
+ * MetricCard 样式
+ * 成员3：管理后台前端
+ */
+
+.metricCard {
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.2s ease;
+}
+
+.metricCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.metricContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.metricIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.metricInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.metricTitle {
+  font-size: 13px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.metricValue {
+  margin: 4px 0;
+}
+
+.metricUnit {
+  font-size: 14px;
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.metricSubtitle {
+  font-size: 12px;
+  display: block;
+  margin-top: 2px;
+}

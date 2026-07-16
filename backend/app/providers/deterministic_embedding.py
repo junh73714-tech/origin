@@ -1,8 +1,8 @@
 """
-EmbeddingProvider 适配层。
+确定性 Embedding 测试替身（成员6）。
 
-正式实现应调用成员5唯一 EmbeddingProvider。此处提供契约一致的本地测试替身，
-禁止与生产向量空间混用；维度与模型名必须与配置一致。
+正式生产向量必须使用成员5的 app.providers.embedding.EmbeddingProvider。
+本模块仅供成员6单元/集成测试，禁止与生产向量空间混用。
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from typing import Protocol
 from app.core.config import settings
 
 
-class EmbeddingProvider(Protocol):
+class EmbeddingProviderProtocol(Protocol):
     model_name: str
     model_version: str
     dimension: int
@@ -24,10 +24,7 @@ class EmbeddingProvider(Protocol):
 
 
 class DeterministicEmbeddingProvider:
-    """
-    确定性伪 Embedding，仅用于单元/集成测试。
-    标记：非正式生产实现。
-    """
+    """确定性伪 Embedding，仅用于单元/集成测试。"""
 
     def __init__(
         self,
@@ -54,14 +51,13 @@ class DeterministicEmbeddingProvider:
                 if len(values) >= self.dimension:
                     break
             digest = hashlib.sha256(digest).digest()
-        # L2 normalize
         norm = math.sqrt(sum(v * v for v in values)) or 1.0
         return [v / norm for v in values]
 
 
-def get_embedding_provider() -> EmbeddingProvider:
+def get_embedding_provider() -> EmbeddingProviderProtocol:
     """
     获取 EmbeddingProvider。
-    成员5正式 Provider 就绪后在此替换；当前返回测试替身并保持配置维度一致。
+    联调阶段可改为返回成员5正式 EmbeddingProvider；当前默认测试替身。
     """
     return DeterministicEmbeddingProvider()
