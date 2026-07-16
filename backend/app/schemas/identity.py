@@ -307,9 +307,17 @@ class RetrievalFilter(BaseSchema):
     knowledge_base_ids: list[str]
     department_ids: list[str]
     group_ids: list[str]
+    project_ids: list[str]
+    regions: list[str]
     max_confidentiality_level: int
     deny_document_ids: list[str]
+    allow_document_ids: list[str]
     effective_temporary_grants: list[TemporaryGrantInfo]
+    require_published: bool = False
+    require_current_version: bool = False
+    exclude_paused: bool = False
+    exclude_offlined: bool = False
+    exclude_expired: bool = False
     scope_hash: str
 
 

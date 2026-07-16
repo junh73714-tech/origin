@@ -65,7 +65,7 @@ class PermissionService:
 
         temp_grant_entries = sorted(
             {
-                f"{g.resource_id}:{g.expiration_time.isoformat()}"
+                f"{g.resource_type}:{g.resource_id}:{g.expiration_time.isoformat()}"
                 for g in temporary_grants
             }
         )
@@ -122,20 +122,59 @@ class PermissionService:
     async def build_retrieval_filters(self, user_id: str) -> RetrievalFilter:
         """构建检索过滤条件"""
         context = await self.get_access_context(user_id)
+        return self._build_retrieval_filter_from_context(context)
 
+    def _build_retrieval_filter_from_context(self, context: AccessContextResponse) -> RetrievalFilter:
+        """从 AccessContextResponse 构建检索过滤条件"""
         return RetrievalFilter(
             tenant_id=context.tenant_id,
             user_id=context.user_id,
             knowledge_base_ids=context.knowledge_base_ids,
             department_ids=context.department_ids,
             group_ids=context.group_ids,
+            project_ids=context.project_ids,
+            regions=context.regions,
             max_confidentiality_level=context.max_confidentiality_level,
             deny_document_ids=context.deny_document_ids,
+            allow_document_ids=[],
             effective_temporary_grants=[
                 TemporaryGrantInfo.model_validate(g)
                 for g in context.temporary_grants
             ],
             scope_hash=context.scope_hash,
+        )
+
+    def build_retrieval_filters_sync(self, access: "AccessContext") -> RetrievalFilter:
+        """
+        同步构建检索过滤条件（供成员6适配层调用）
+        协议签名: build_retrieval_filters(access: AccessContext) -> RetrievalFilter
+        """
+        temp_grants = access.data_scopes.get("temporary_grants", [])
+        effective_grants = [
+            TemporaryGrantInfo(
+                id=str(i),
+                user_id=access.user_id,
+                resource_type=g.get("resource_type", "document"),
+                resource_id=g.get("resource_id", ""),
+                effective_time=None,
+                expiration_time=None,
+            )
+            for i, g in enumerate(temp_grants)
+        ]
+
+        return RetrievalFilter(
+            tenant_id=access.tenant_id,
+            user_id=access.user_id,
+            knowledge_base_ids=access.data_scopes.get("knowledge_base", []),
+            department_ids=[],
+            group_ids=[],
+            project_ids=[],
+            regions=[],
+            max_confidentiality_level=0,
+            deny_document_ids=[],
+            allow_document_ids=[],
+            effective_temporary_grants=effective_grants,
+            scope_hash="",
         )
 
     async def build_opensearch_filter(self, user_id: str) -> OpenSearchFilterDSL:
@@ -147,20 +186,46 @@ class PermissionService:
 
         must_clauses.append({"term": {"tenant_id": filters.tenant_id}})
 
+        temp_grant_doc_ids = [
+            g.resource_id for g in filters.effective_temporary_grants
+            if g.resource_type == "document"
+        ]
+
+        if not filters.knowledge_base_ids and not temp_grant_doc_ids:
+            return OpenSearchFilterDSL(
+                bool={
+                    "must": [{"match_none": {}}],
+                }
+            )
+
         if filters.knowledge_base_ids:
             must_clauses.append(
                 {"terms": {"knowledge_base_id": filters.knowledge_base_ids}}
             )
 
-        if filters.max_confidentiality_level > 0:
-            must_clauses.append(
-                {"range": {"confidentiality_level": {"lte": filters.max_confidentiality_level}}}
-            )
+        must_clauses.append(
+            {"range": {"confidentiality_level": {"lte": filters.max_confidentiality_level}}}
+        )
 
         if filters.deny_document_ids:
             must_not_clauses.append(
                 {"terms": {"document_id": filters.deny_document_ids}}
             )
+
+        if temp_grant_doc_ids:
+            should_clauses = [
+                {"terms": {"document_id": temp_grant_doc_ids}}
+            ]
+            if filters.knowledge_base_ids:
+                should_clauses.append(
+                    {"terms": {"knowledge_base_id": filters.knowledge_base_ids}}
+                )
+            must_clauses.append({
+                "bool": {
+                    "should": should_clauses,
+                    "minimum_should_match": 1
+                }
+            })
 
         return OpenSearchFilterDSL(
             bool={
@@ -178,14 +243,35 @@ class PermissionService:
 
         conditions.append("tenant_id = :tenant_id")
 
+        temp_grant_doc_ids = [
+            g.resource_id for g in filters.effective_temporary_grants
+            if g.resource_type == "document"
+        ]
+
+        if not filters.knowledge_base_ids and not temp_grant_doc_ids:
+            return PostgreSQLFilter(
+                where_clause="FALSE",
+                params={},
+            )
+
+        or_conditions = []
         if filters.knowledge_base_ids:
-            conditions.append(f"knowledge_base_id IN ({','.join([':kb_' + str(i) for i in range(len(filters.knowledge_base_ids))])})")
+            kb_placeholders = ",".join([f":kb_{i}" for i in range(len(filters.knowledge_base_ids))])
+            or_conditions.append(f"knowledge_base_id IN ({kb_placeholders})")
             for i, kb_id in enumerate(filters.knowledge_base_ids):
                 params[f"kb_{i}"] = kb_id
 
-        if filters.max_confidentiality_level > 0:
-            conditions.append("confidentiality_level <= :max_confidentiality_level")
-            params["max_confidentiality_level"] = filters.max_confidentiality_level
+        if temp_grant_doc_ids:
+            temp_placeholders = ",".join([f":temp_{i}" for i in range(len(temp_grant_doc_ids))])
+            or_conditions.append(f"document_id IN ({temp_placeholders})")
+            for i, doc_id in enumerate(temp_grant_doc_ids):
+                params[f"temp_{i}"] = doc_id
+
+        if or_conditions:
+            conditions.append(f"({' OR '.join(or_conditions)})")
+
+        conditions.append("confidentiality_level <= :max_confidentiality_level")
+        params["max_confidentiality_level"] = filters.max_confidentiality_level
 
         if filters.deny_document_ids:
             conditions.append(f"document_id NOT IN ({','.join([':deny_' + str(i) for i in range(len(filters.deny_document_ids))])})")
