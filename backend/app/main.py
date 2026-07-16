@@ -37,7 +37,7 @@ def create_app() -> FastAPI:
     """创建 FastAPI 应用"""
 
     app = FastAPI(
-        title=settings.app.name,
+        title=settings.name,
         description="企业级混合检索 RAG 知识问答平台 API",
         version="0.1.0",
         docs_url="/docs",
@@ -67,12 +67,28 @@ def register_routes(app: FastAPI) -> None:
     from app.api.knowledge_bases import knowledge_bases_router
     from app.api.qa import qa_router
     from app.api.feedback import feedback_router
+    from app.api.organization import organization_router
+    from app.api.rbac import rbac_router
+    from app.api.data_permission import data_permission_router
+    from app.api.audit import audit_router
 
     # 健康检查
     app.include_router(health_router, prefix="/api/v1", tags=["健康检查"])
 
     # 认证
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["认证"])
+
+    # 组织管理
+    app.include_router(organization_router, prefix="/api/v1", tags=["组织管理"])
+
+    # RBAC
+    app.include_router(rbac_router, prefix="/api/v1", tags=["RBAC"])
+
+    # 数据权限
+    app.include_router(data_permission_router, prefix="/api/v1", tags=["数据权限"])
+
+    # 审计
+    app.include_router(audit_router, prefix="/api/v1", tags=["审计"])
 
     # 知识库
     app.include_router(knowledge_bases_router, prefix="/api/v1/knowledge-bases", tags=["知识库"])

@@ -5,6 +5,7 @@
 from fastapi import APIRouter
 
 router = APIRouter()
+knowledge_bases_router = router
 
 # TODO: 由成员5实现
 # - POST / - 创建知识库

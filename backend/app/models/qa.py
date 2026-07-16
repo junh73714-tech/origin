@@ -28,7 +28,7 @@ class StandardQA(BaseModel):
     priority: Mapped[int] = mapped_column(default=0, nullable=False)
     view_count: Mapped[int] = mapped_column(default=0, nullable=False)
     use_count: Mapped[int] = mapped_column(default=0, nullable=False)
-    metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    qa_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     published_at: Mapped[str | None] = mapped_column(nullable=True)
     expired_at: Mapped[str | None] = mapped_column(nullable=True)
 
@@ -70,7 +70,7 @@ class CandidateQA(BaseModel):
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
     review_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewed_at: Mapped[str | None] = mapped_column(nullable=True)
-    metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    candidate_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # 关系
     standard_qa: Mapped["StandardQA | None"] = relationship("StandardQA")
@@ -151,7 +151,7 @@ class Conversation(BaseModel):
     session_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
-    metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    conv_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # 关系
     messages: Mapped[list["Message"]] = relationship("Message", back_populates="conversation", order_by="Message.created_at")
@@ -187,7 +187,7 @@ class Message(BaseModel):
     references: Mapped[list[dict] | None] = mapped_column(JSONB, nullable=True)  # 检索到的引用
     feedback: Mapped[str | None] = mapped_column(String(50), nullable=True)  # positive, negative, null
     feedback_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
-    metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    msg_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # 关系
     conversation: Mapped["Conversation"] = relationship("Conversation", back_populates="messages")

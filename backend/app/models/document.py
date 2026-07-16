@@ -50,7 +50,7 @@ class Document(BaseModel):
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)  # MinIO 路径
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
     char_count: Mapped[int | None] = mapped_column(nullable=True)
-    metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    doc_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # 当前版本
     current_version: Mapped[int] = mapped_column(default=1, nullable=False)
@@ -113,7 +113,7 @@ class DocumentChunk(BaseModel):
     chunk_index: Mapped[int] = mapped_column(nullable=False)  # 在文档中的顺序
     char_start: Mapped[int] = mapped_column(nullable=False)  # 在原文中的起始位置
     char_end: Mapped[int] = mapped_column(nullable=False)  # 在原文中的结束位置
-    metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    chunk_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     index_status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
 
     # 关系

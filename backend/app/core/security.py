@@ -10,8 +10,8 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
-# 密码加密上下文
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# 密码加密上下文 - 使用 argon2 替代 bcrypt
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -111,6 +111,8 @@ class AccessContext:
 
     def has_permission(self, permission: str) -> bool:
         """检查是否具有指定权限"""
+        if "*" in self.permissions:
+            return True
         return permission in self.permissions
 
     def has_role(self, role: str) -> bool:

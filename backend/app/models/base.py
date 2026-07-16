@@ -64,10 +64,15 @@ class AuditMixin:
     )
 
 
-class BaseModel(Base, TimestampMixin, TenantMixin, AuditMixin):
+class BaseModel(Base, TimestampMixin, TenantMixin, SoftDeleteMixin, AuditMixin):
     """基础模型"""
 
     __abstract__ = True
+
+    id: Mapped[str] = mapped_column(
+        String(64),
+        primary_key=True,
+    )
 
     def to_dict(self, exclude: list[str] | None = None) -> dict[str, Any]:
         """转换为字典"""

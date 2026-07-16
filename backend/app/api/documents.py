@@ -5,6 +5,7 @@
 from fastapi import APIRouter
 
 router = APIRouter()
+documents_router = router
 
 # TODO: 由成员5实现
 # - POST /upload - 上传文档

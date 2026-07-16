@@ -27,6 +27,16 @@ class User(BaseModel):
         back_populates="users",
     )
     sessions: Mapped[list["Session"]] = relationship("Session", back_populates="user")
+    departments: Mapped[list["Department"]] = relationship(
+        "Department",
+        secondary="user_departments",
+        back_populates="users",
+    )
+    groups: Mapped[list["UserGroup"]] = relationship(
+        "UserGroup",
+        secondary="user_group_members",
+        back_populates="members",
+    )
 
     def __repr__(self) -> str:
         return f"<User {self.username}>"
@@ -34,3 +44,4 @@ class User(BaseModel):
 
 # 延迟导入避免循环引用
 from app.models.auth import Role, Session, Permission
+from app.models.identity import Department, UserGroup
