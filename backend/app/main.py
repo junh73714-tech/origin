@@ -20,24 +20,24 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """应用生命周期管理"""
     # 启动
-    logger.info("application_starting", app_name=settings.app.name)
+    logger.info("application_starting", app_name=settings.name)
     setup_logging()
     await init_db()
-    logger.info("application_started", app_name=settings.app.name)
+    logger.info("application_started", app_name=settings.name)
 
     yield
 
     # 关闭
-    logger.info("application_stopping", app_name=settings.app.name)
+    logger.info("application_stopping", app_name=settings.name)
     await close_db()
-    logger.info("application_stopped", app_name=settings.app.name)
+    logger.info("application_stopped", app_name=settings.name)
 
 
 def create_app() -> FastAPI:
     """创建 FastAPI 应用"""
 
     app = FastAPI(
-        title=settings.app.name,
+        title=settings.name,
         description="企业级混合检索 RAG 知识问答平台 API",
         version="0.1.0",
         docs_url="/docs",
@@ -61,12 +61,13 @@ def create_app() -> FastAPI:
 def register_routes(app: FastAPI) -> None:
     """注册路由"""
     from app.api.common import health_router
-    from app.api.auth import auth_router
-    from app.api.documents import documents_router
-    from app.api.chunks import chunks_router
-    from app.api.knowledge_bases import knowledge_bases_router
-    from app.api.qa import qa_router
-    from app.api.feedback import feedback_router
+    from app.api.auth import router as auth_router
+    from app.api.documents import router as documents_router
+    from app.api.chunks import router as chunks_router
+    from app.api.knowledge_bases import router as knowledge_bases_router
+    from app.api.qa import router as qa_router
+    from app.api.feedback import router as feedback_router
+    from app.api.index_tasks import router as index_tasks_router
 
     # 健康检查
     app.include_router(health_router, prefix="/api/v1", tags=["健康检查"])
@@ -82,6 +83,9 @@ def register_routes(app: FastAPI) -> None:
 
     # Chunk
     app.include_router(chunks_router, prefix="/api/v1/chunks", tags=["文档片段"])
+
+    # 索引任务
+    app.include_router(index_tasks_router, prefix="/api/v1/index-tasks", tags=["索引任务"])
 
     # 问答
     app.include_router(qa_router, prefix="/api/v1/qa", tags=["问答"])
