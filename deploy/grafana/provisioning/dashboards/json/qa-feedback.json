@@ -1,0 +1,42 @@
+{
+  "dashboard": {
+    "title": "标准问答与用户反馈",
+    "uid": "m7-qa-feedback",
+    "tags": ["m7", "qa", "feedback"],
+    "panels": [
+      {
+        "title": "标准问答命中率趋势",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [{"expr": "rag_standard_qa_match_rate"}]
+      },
+      {
+        "title": "各状态问答数量",
+        "type": "bargauge",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [{"expr": "rag_standard_qa_count_by_status", "legendFormat": "{{status}}"}]
+      },
+      {
+        "title": "用户反馈分布",
+        "type": "piechart",
+        "gridPos": {"x": 0, "y": 8, "w": 8, "h": 8},
+        "targets": [{"expr": "sum(rate(rag_user_feedback_total[1h])) by (feedback_type)", "legendFormat": "{{feedback_type}}"}]
+      },
+      {
+        "title": "匹配命中/未命中",
+        "type": "graph",
+        "gridPos": {"x": 8, "y": 8, "w": 8, "h": 8},
+        "targets": [
+          {"expr": "sum(rate(rag_standard_qa_match_total{result=\"hit\"}[5m]))", "legendFormat": "命中"},
+          {"expr": "sum(rate(rag_standard_qa_match_total{result=\"miss\"}[5m]))", "legendFormat": "未命中"}
+        ]
+      },
+      {
+        "title": "拒答率趋势",
+        "type": "graph",
+        "gridPos": {"x": 16, "y": 8, "w": 8, "h": 8},
+        "targets": [{"expr": "rate(rag_standard_qa_refusal_total[5m])"}]
+      }
+    ]
+  }
+}
