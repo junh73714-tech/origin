@@ -67,25 +67,31 @@ export const FrequentQuestions = createPlaceholderPage('高频问题', '高频�
 export const UnmatchedQuestions = createPlaceholderPage('未命中问题', '未命中问题处理');
 export const LowQualityAnswers = createPlaceholderPage('低质量答案', '低质量答案分析与改进');
 
-// ========== 评估中心 ==========
+// ========== M4: 评估中心（已实现） ==========
+export { EvalTasks } from './EvalTasks';
+
+// ========== M4: 安全与审计（已实现） ==========
+export { SecurityEvents } from './SecurityEvents';
+export { OperationLogs } from './OperationLogs';
+
+// ========== M4: 系统设置（已实现） ==========
+export { SystemHealth } from './SystemHealth';
+
+// ========== M4 剩余：评估中心 ==========
 export const EvalDatasets = createPlaceholderPage('Golden Dataset', '评估数据集管理');
 export const EvalSamples = createPlaceholderPage('评估样本', '评估样本管理');
-export const EvalTasks = createPlaceholderPage('评估任务', '评估任务创建与进度查看');
 export const EvalHistory = createPlaceholderPage('历史评估', '历史评估结果查看');
 export const EvalCompare = createPlaceholderPage('参数对比', '检索参数配置对比');
 
-// ========== 安全与审计 ==========
+// ========== M4 剩余：安全与审计 ==========
 export const QueryLogs = createPlaceholderPage('查询日志', '用户查询记录与追踪');
-export const OperationLogs = createPlaceholderPage('操作日志', '管理员操作审计记录');
 export const LoginLogs = createPlaceholderPage('登录日志', '用户登录记录');
-export const SecurityEvents = createPlaceholderPage('安全事件', '越权、注入等安全事件');
 export const RiskAlerts = createPlaceholderPage('风险告警', '安全风险告警列表');
 
-// ========== 系统设置 ==========
+// ========== M4 剩余：系统设置 ==========
 export const LLMConfig = createPlaceholderPage('LLM 配置', '大语言模型配置');
 export const EmbeddingConfig = createPlaceholderPage('Embedding 配置', '向量嵌入模型配置');
 export const RerankerConfig = createPlaceholderPage('Reranker 配置', '重排序模型配置');
 export const OCRConfig = createPlaceholderPage('OCR 配置', '文档识别配置');
 export const RetrievalConfig = createPlaceholderPage('检索参数', '检索运行参数配置');
 export const PromptTemplates = createPlaceholderPage('提示词模板', '提示词模板管理');
-export const SystemHealth = createPlaceholderPage('系统健康', '系统组件健康状态监控');
