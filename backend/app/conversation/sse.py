@@ -20,6 +20,7 @@ def iter_chat_sse(
     answer_type: str = "rag",
     metadata: dict[str, Any] | None = None,
     chunk_size: int = 24,
+    query_id: str | None = None,
 ) -> Iterable[str]:
     """
     生成符合公共契约的 SSE：
@@ -34,6 +35,7 @@ def iter_chat_sse(
             "message_id": message_id,
             "trace_id": trace_id,
             "answer_type": answer_type,
+            "query_id": query_id,
         },
     )
     if not answer:
@@ -57,17 +59,16 @@ def iter_chat_sse(
             "answer_type": answer_type,
         },
     )
-    yield format_sse(
-        "done",
-        {
-            "conversation_id": conversation_id,
-            "message_id": message_id,
-            "trace_id": trace_id,
-            "answer": answer,
-            "answer_type": answer_type,
-            "citations": references,
-        },
-    )
+    done_payload = {
+        "conversation_id": conversation_id,
+        "message_id": message_id,
+        "trace_id": trace_id,
+        "answer": answer,
+        "answer_type": answer_type,
+        "citations": references,
+        "query_id": query_id,
+    }
+    yield format_sse("done", done_payload)
 
 
 async def aiter_chat_sse(**kwargs: Any) -> AsyncIterator[str]:

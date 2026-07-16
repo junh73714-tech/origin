@@ -63,9 +63,18 @@ class InMemoryVectorStore:
         deny = set(where.get("deny_document_ids") or [])
         if row.get("document_id") in deny:
             return False
-        kb_ids = where.get("knowledge_base_ids") or []
-        if kb_ids and row.get("knowledge_base_id") not in kb_ids:
+        allow = list(where.get("allow_document_ids") or [])
+        temp = list(where.get("temporary_grant_document_ids") or [])
+        kb_ids = list(where.get("knowledge_base_ids") or [])
+        if not allow and not temp and not kb_ids:
             return False
+        doc_id = row.get("document_id")
+        if allow and doc_id not in set(allow) | set(temp):
+            return False
+        if kb_ids and row.get("knowledge_base_id") not in kb_ids:
+            # 临时授权可跨 KB
+            if doc_id not in set(temp):
+                return False
         max_level = where.get("max_confidentiality_level", 0)
         if int(row.get("confidentiality_level") or 0) > int(max_level):
             return False

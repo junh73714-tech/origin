@@ -17,7 +17,9 @@ from app.providers.llm.provider import LLMProvider, get_llm_provider
 from app.providers.reranker.provider import RerankerProvider, get_reranker_provider
 from app.rag.context_builder import assemble_context
 from app.rag.evidence import assess_evidence
+from app.rag.metrics import observe_stage
 from app.rag.preprocess import preprocess
+from app.rag.safety import check_input_safety, check_output_safety
 from app.rag.standard_qa_adapter import MockStandardQAMatcher, StandardQAMatcher
 from app.rag.state import RAGState
 from app.retrieval.permission_adapter import (
@@ -36,7 +38,9 @@ NodeFn = Callable[[RAGState], RAGState]
 def _timed(state: RAGState, name: str, fn: Callable[[], None]) -> None:
     started = time.perf_counter()
     fn()
-    state.timings_ms[name] = int((time.perf_counter() - started) * 1000)
+    elapsed = time.perf_counter() - started
+    state.timings_ms[name] = int(elapsed * 1000)
+    observe_stage(name, elapsed)
 
 
 class QAGraph:
@@ -96,9 +100,14 @@ class QAGraph:
         def cancelled() -> bool:
             return bool(cancel_check and cancel_check())
 
+        # 0) 输入安全检查
+        input_safe = check_input_safety(query)
+        state.debug["input_safety"] = {"ok": input_safe.ok, "reasons": input_safe.reasons}
+        query_for_graph = input_safe.sanitized_text or query
+
         # 1) 预处理
         def do_preprocess() -> None:
-            pre = preprocess(query, history=history)
+            pre = preprocess(query_for_graph, history=history)
             state.original_query = pre.original_query
             state.rewritten_query = pre.rewritten_query
             state.intent = pre.intent
@@ -142,6 +151,17 @@ class QAGraph:
 
         _timed(state, "standard_qa", do_std)
         if state.answer_type == "standard_qa":
+            # 标准问答路径也做输出安全与引用二次校验
+            out = check_output_safety(state.generated_answer)
+            state.generated_answer = out.sanitized_text
+            state.debug["output_safety"] = {"ok": out.ok, "reasons": out.reasons}
+            validated: list[dict[str, Any]] = []
+            for cit in state.citations:
+                if self.permission.can_open_citation(
+                    access, cit | {"tenant_id": access.tenant_id}
+                ):
+                    validated.append(cit)
+            state.citations = validated
             return state
 
         # 3) 混合检索
@@ -198,6 +218,11 @@ class QAGraph:
             state.debug["reranker_mock"] = getattr(self.reranker, "is_bound", False) is False
 
         _timed(state, "rerank", do_rerank)
+        if cancelled():
+            state.cancelled = True
+            state.refusal_reason = "用户取消"
+            return state
+
         candidates = [
             RetrievalHit.model_validate(x)
             for x in (state.reranked_results or state.fused_results)
@@ -230,9 +255,7 @@ class QAGraph:
                 + "。请补充后重试。"
             )
             state.refusal_reason = "需要用户补充"
-            # 仍组装部分引用供参考
         if assessment.decision == "supplement" and candidates:
-            # 一期：用现有候选继续，记录需补充
             state.debug["supplement_needed"] = assessment.missing
 
         # 6) 上下文组装
@@ -252,6 +275,7 @@ class QAGraph:
                 "status": s.status,
                 "permission_summary": s.permission_summary,
                 "quote": s.text,
+                "is_current_version": True,
             }
             for s in ctx.snippets
         ]
@@ -263,52 +287,70 @@ class QAGraph:
             state.refusal_reason = "无有效证据"
             return state
 
-        evidence_status = "ok"
-        if assessment.decision == "conflict":
-            evidence_status = "conflict"
-        elif assessment.decision in {"ask_user", "supplement"}:
-            evidence_status = "partial"
-        if state.errors.get("retrieval") and not candidates:
-            evidence_status = "insufficient"
+        # ask_user 已给出引导文案，不再调用 LLM
+        skip_llm = assessment.decision == "ask_user" and bool(state.generated_answer)
 
-        user_prompt = build_user_prompt(
-            state.rewritten_query, ctx.prompt_block, evidence_status
-        )
-        # 防注入：剥离证据中伪装系统指令
-        if "忽略以上指令" in user_prompt or "ignore previous" in user_prompt.lower():
-            state.debug["prompt_injection_detected"] = True
-            user_prompt = user_prompt.replace("忽略以上指令", "[已屏蔽]")
+        if not skip_llm:
+            evidence_status = "ok"
+            if assessment.decision == "conflict":
+                evidence_status = "conflict"
+            elif assessment.decision in {"ask_user", "supplement"}:
+                evidence_status = "partial"
+            if state.errors.get("retrieval") and not candidates:
+                evidence_status = "insufficient"
 
-        def do_llm() -> None:
-            try:
-                result = self.llm.generate(SYSTEM_PROMPT, user_prompt)
-            except Exception as exc:  # noqa: BLE001
-                state.errors["llm"] = str(exc)
-                state.answer_type = "refusal"
-                state.generated_answer = "模型服务暂时不可用，请稍后重试。"
-                state.refusal_reason = "LLM 失败"
-                return
-            if state.answer_type != "reference":
-                state.generated_answer = result.answer
-                state.answer_type = result.answer_type
-            elif not state.generated_answer:
-                state.generated_answer = result.answer
-            state.confidence = result.confidence
-            if result.refusal_reason:
-                state.refusal_reason = result.refusal_reason
-            state.debug["llm"] = {
-                "model": result.model_name,
-                "version": result.model_version,
-                "prompt_version": result.prompt_version or PROMPT_VERSION,
-                "is_mock": result.is_mock,
-                "token_usage": result.token_usage,
-            }
+            user_prompt = build_user_prompt(
+                state.rewritten_query, ctx.prompt_block, evidence_status
+            )
+            if "忽略以上指令" in user_prompt or "ignore previous" in user_prompt.lower():
+                state.debug["prompt_injection_detected"] = True
+                user_prompt = user_prompt.replace("忽略以上指令", "[已屏蔽]")
 
-        _timed(state, "llm", do_llm)
+            def do_llm() -> None:
+                if cancelled():
+                    state.cancelled = True
+                    state.refusal_reason = "用户取消"
+                    return
+                try:
+                    result = self.llm.generate(SYSTEM_PROMPT, user_prompt)
+                except Exception as exc:  # noqa: BLE001
+                    state.errors["llm"] = str(exc)
+                    state.answer_type = "refusal"
+                    state.generated_answer = "模型服务暂时不可用，请稍后重试。"
+                    state.refusal_reason = "LLM 失败"
+                    return
+                if state.answer_type != "reference":
+                    state.generated_answer = result.answer
+                    state.answer_type = result.answer_type
+                elif not state.generated_answer:
+                    state.generated_answer = result.answer
+                state.confidence = result.confidence
+                if result.refusal_reason:
+                    state.refusal_reason = result.refusal_reason
+                state.debug["llm"] = {
+                    "model": result.model_name,
+                    "version": result.model_version,
+                    "prompt_version": result.prompt_version or PROMPT_VERSION,
+                    "is_mock": result.is_mock,
+                    "token_usage": result.token_usage,
+                }
 
-        # 8) 引用权限二次校验
+            _timed(state, "llm", do_llm)
+            if state.cancelled:
+                return state
+
+        # 8) 输出安全检查
+        out = check_output_safety(state.generated_answer or "")
+        state.generated_answer = out.sanitized_text
+        state.debug["output_safety"] = {"ok": out.ok, "reasons": out.reasons}
+
+        # 9) 引用权限二次校验（存在性/状态/权限）
         citations: list[dict[str, Any]] = []
         for snip in state.selected_context:
+            if snip.get("status") in {"paused", "offlined", "expired"}:
+                continue
+            if snip.get("is_current_version") is False:
+                continue
             ok = self.permission.can_open_citation(access, snip | {"tenant_id": access.tenant_id})
             if not ok:
                 logger.warning(
@@ -317,18 +359,32 @@ class QAGraph:
                     user_id=access.user_id,
                 )
                 continue
+            quote = snip.get("quote") or ""
+            # 引用片段与答案弱一致性：拒答可不要求匹配
+            if state.answer_type not in {"refusal", "reference"} and quote:
+                overlap = any(
+                    tok and tok in (state.generated_answer or "")
+                    for tok in quote[:40].split()
+                ) or quote[:12] in (state.generated_answer or "")
+                if not overlap and len(quote) > 20:
+                    state.debug.setdefault("citation_mismatch", []).append(
+                        snip.get("citation_id")
+                    )
             citations.append(
                 {
                     "citation_id": snip["citation_id"],
                     "document_name": snip.get("document_name"),
                     "document_version": snip.get("document_version_id"),
+                    "document_version_id": snip.get("document_version_id"),
                     "title_path": snip.get("title_path"),
                     "page_start": snip.get("page_start"),
                     "page_end": snip.get("page_end"),
-                    "quote": snip.get("quote"),
+                    "quote": quote,
                     "source_status": snip.get("status"),
                     "document_id": snip.get("document_id"),
                     "chunk_id": snip.get("chunk_id"),
+                    "knowledge_base_id": snip.get("knowledge_base_id"),
+                    "is_current_version": snip.get("is_current_version", True),
                 }
             )
         state.citations = citations

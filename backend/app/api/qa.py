@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, Query, Request
+from fastapi import APIRouter, Header, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -26,6 +26,7 @@ from app.providers.embedding.provider import get_embedding_provider
 from app.providers.llm.provider import get_llm_provider
 from app.providers.reranker.provider import get_reranker_provider
 from app.rag.graph import QAGraph
+from app.rag.metrics import inc_cache, inc_query
 from app.retrieval.keyword import InMemoryKeywordIndex, KeywordRetriever
 from app.retrieval.permission_adapter import DefaultPermissionAdapter, compute_scope_hash
 from app.retrieval.service import HybridRetrievalService
@@ -78,6 +79,26 @@ def _enrich_access(access: AccessContext) -> AccessContext:
     return access
 
 
+def _build_cache_key(access: AccessContext, content: str) -> tuple[str, str]:
+    emb = get_embedding_provider()
+    llm = get_llm_provider()
+    rerank = get_reranker_provider()
+    scope_hash = getattr(access, "scope_hash", "") or compute_scope_hash(access)
+    key = build_query_cache_key(
+        tenant_id=access.tenant_id,
+        scope_hash=scope_hash,
+        knowledge_base_ids=list(getattr(access, "knowledge_base_ids", []) or []),
+        document_version_digest="none",
+        standard_qa_version="none",
+        question_digest=digest_text(content),
+        llm_version=f"{llm.model_name}:mock",
+        embedding_version=f"{emb.model_name}:{emb.model_version}:{emb.dimension}",
+        reranker_version=f"{rerank.model_name}:mock",
+        prompt_version=PROMPT_VERSION,
+    )
+    return key, scope_hash
+
+
 @router.post("/chat")
 async def chat(
     body: ChatRequest,
@@ -89,41 +110,36 @@ async def chat(
     access = _enrich_access(access)
     trace_id = getattr(request.state, "trace_id", None) or f"tr_{uuid.uuid4().hex[:12]}"
     request_id = x_request_id or getattr(request.state, "request_id", None)
-
-    emb = get_embedding_provider()
-    llm = get_llm_provider()
-    rerank = get_reranker_provider()
-    scope_hash = getattr(access, "scope_hash", "") or compute_scope_hash(access)
-    cache_key = build_query_cache_key(
-        tenant_id=access.tenant_id,
-        scope_hash=scope_hash,
-        knowledge_base_ids=list(getattr(access, "knowledge_base_ids", []) or []),
-        document_version_digest="none",
-        standard_qa_version="none",
-        question_digest=digest_text(body.content),
-        llm_version=f"{llm.model_name}:mock",
-        embedding_version=f"{emb.model_name}:{emb.model_version}:{emb.dimension}",
-        reranker_version=f"{rerank.model_name}:mock",
-        prompt_version=PROMPT_VERSION,
-    )
+    cache_key, scope_hash = _build_cache_key(access, body.content)
     cached = default_query_cache.get(cache_key)
+
+    started = default_conversation_store.begin_query(
+        tenant_id=access.tenant_id,
+        user_id=access.user_id,
+        conversation_id=body.conversation_id,
+        original_query=body.content,
+        scope_hash=scope_hash,
+        trace_id=trace_id,
+        request_id=request_id,
+    )
+    query_id = started["query_id"]
+    conversation_id = started["conversation_id"]
 
     async def event_stream():
         try:
             if cached:
-                ids = default_conversation_store.append_turn(
-                    conversation_id=body.conversation_id,
+                inc_cache("hit")
+                ids = default_conversation_store.append_cached_turn(
+                    conversation_id=conversation_id,
                     tenant_id=access.tenant_id,
                     user_id=access.user_id,
                     user_content=body.content,
-                    state=_graph.run(  # 仍跑一遍最小状态以保持结构；优先用缓存答案
-                        body.content, access, conversation_id=body.conversation_id, trace_id=trace_id
-                    ),
+                    cached=cached,
+                    trace_id=trace_id,
+                    scope_hash=scope_hash,
+                    query_id=query_id,
                 )
-                # 覆盖为缓存答案
-                msg = default_conversation_store.messages[ids["message_id"]]
-                msg["content"] = cached.get("answer", "")
-                msg["references"] = cached.get("citations", [])
+                inc_query(cached.get("answer_type", "rag"), True)
                 async for chunk in aiter_chat_sse(
                     answer=cached.get("answer", ""),
                     references=cached.get("citations", []),
@@ -131,33 +147,42 @@ async def chat(
                     message_id=ids["message_id"],
                     trace_id=trace_id,
                     answer_type=cached.get("answer_type", "rag"),
-                    metadata={"cache_hit": True, "request_id": request_id},
+                    metadata={"cache_hit": True, "request_id": request_id, "query_id": query_id},
+                    query_id=query_id,
                 ):
                     yield chunk
                 return
 
+            inc_cache("miss")
+            history = default_conversation_store.history_texts(conversation_id, access.user_id)
             state = _graph.run(
                 body.content,
                 access,
-                conversation_id=body.conversation_id,
+                conversation_id=conversation_id,
                 trace_id=trace_id,
+                history=history,
+                cancel_check=lambda: default_conversation_store.is_cancelled(query_id),
             )
             ids = default_conversation_store.append_turn(
-                conversation_id=body.conversation_id,
+                conversation_id=conversation_id,
                 tenant_id=access.tenant_id,
                 user_id=access.user_id,
                 user_content=body.content,
                 state=state,
+                query_id=query_id,
+                cache_hit=False,
             )
-            default_query_cache.set(
-                cache_key,
-                {
-                    "answer": state.generated_answer,
-                    "citations": state.citations,
-                    "answer_type": state.answer_type,
-                    "scope_hash": scope_hash,
-                },
-            )
+            if not state.cancelled:
+                default_query_cache.set(
+                    cache_key,
+                    {
+                        "answer": state.generated_answer,
+                        "citations": state.citations,
+                        "answer_type": state.answer_type,
+                        "scope_hash": scope_hash,
+                    },
+                )
+            inc_query(state.answer_type or "rag", False)
             async for chunk in aiter_chat_sse(
                 answer=state.generated_answer,
                 references=state.citations,
@@ -170,12 +195,18 @@ async def chat(
                     "request_id": request_id,
                     "timings_ms": state.timings_ms,
                     "refusal_reason": state.refusal_reason,
+                    "query_id": query_id,
+                    "cancelled": state.cancelled,
                 },
+                query_id=query_id,
             ):
                 yield chunk
         except Exception as exc:  # noqa: BLE001
             logger.error("chat_stream_error", error=str(exc), trace_id=trace_id)
-            yield format_sse("error", {"message": "问答处理失败", "code": "BIZ_RETRIEVAL_FAILED"})
+            yield format_sse(
+                "error",
+                {"message": "问答处理失败", "code": "BIZ_RETRIEVAL_FAILED", "query_id": query_id},
+            )
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
@@ -226,17 +257,110 @@ async def get_citation(citation_id: str, access: RequiredAccess):
 
 @router.post("/queries/{query_id}/cancel")
 async def cancel_query(query_id: str, body: CancelRequest, access: RequiredAccess):
-    del body, access
-    ok = default_conversation_store.cancel_query(query_id)
-    return success_response(data={"query_id": query_id, "cancelled": ok})
+    del body
+    access = _enrich_access(access)
+    ok = default_conversation_store.cancel_query(query_id, access.user_id, access.tenant_id)
+    if not ok:
+        from app.core.exceptions import ResourceNotFoundError
+
+        raise ResourceNotFoundError("query", query_id)
+    return success_response(data={"query_id": query_id, "cancelled": True})
+
+
+@router.get("/queries/{query_id}/stream")
+async def stream_query(query_id: str, access: RequiredAccess):
+    """按 query_id 重放最终结果（契约扩展，供成员2重连）。"""
+    access = _enrich_access(access)
+    q = default_conversation_store.get_query(query_id)
+    if not q or q.get("user_id") != access.user_id:
+        from app.core.exceptions import ResourceNotFoundError
+
+        raise ResourceNotFoundError("query", query_id)
+    state = q.get("state") or {}
+
+    async def event_stream():
+        async for chunk in aiter_chat_sse(
+            answer=state.get("generated_answer") or "",
+            references=state.get("citations") or [],
+            conversation_id=q.get("conversation_id") or "",
+            message_id=q.get("message_id") or "",
+            trace_id=state.get("trace_id") or "",
+            answer_type=state.get("answer_type") or "rag",
+            metadata={"replay": True, "query_id": query_id},
+            query_id=query_id,
+        ):
+            yield chunk
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@router.post("/messages/{message_id}/regenerate")
+async def regenerate_message(message_id: str, access: RequiredAccess, request: Request):
+    """重新生成助手消息。"""
+    access = _enrich_access(access)
+    msg = default_conversation_store.get_message(message_id)
+    if not msg or msg.get("role") != "assistant":
+        from app.core.exceptions import ResourceNotFoundError
+
+        raise ResourceNotFoundError("message", message_id)
+    conv = default_conversation_store.get_conversation(msg["conversation_id"], access.user_id)
+    if not conv:
+        from app.core.exceptions import ResourceNotFoundError
+
+        raise ResourceNotFoundError("conversation", msg["conversation_id"])
+    # 取上一条用户消息
+    user_content = ""
+    for m in reversed(conv.get("messages") or []):
+        if m.get("role") == "user":
+            user_content = m.get("content") or ""
+            break
+    if not user_content:
+        from app.core.exceptions import ValidationError
+
+        raise ValidationError(message="找不到可重生成的用户问题")
+
+    trace_id = getattr(request.state, "trace_id", None) or f"tr_{uuid.uuid4().hex[:12]}"
+    history = default_conversation_store.history_texts(conv["id"], access.user_id)
+    started = default_conversation_store.begin_query(
+        tenant_id=access.tenant_id,
+        user_id=access.user_id,
+        conversation_id=conv["id"],
+        original_query=user_content,
+        scope_hash=getattr(access, "scope_hash", "") or compute_scope_hash(access),
+        trace_id=trace_id,
+    )
+    query_id = started["query_id"]
+    state = _graph.run(
+        user_content,
+        access,
+        conversation_id=conv["id"],
+        trace_id=trace_id,
+        history=history,
+        cancel_check=lambda: default_conversation_store.is_cancelled(query_id),
+    )
+    ids = default_conversation_store.append_turn(
+        conversation_id=conv["id"],
+        tenant_id=access.tenant_id,
+        user_id=access.user_id,
+        user_content=user_content,
+        state=state,
+        query_id=query_id,
+    )
+    return success_response(
+        data={
+            "conversation_id": ids["conversation_id"],
+            "message_id": ids["message_id"],
+            "query_id": query_id,
+            "answer": state.generated_answer,
+            "answer_type": state.answer_type,
+            "citations": state.citations,
+        }
+    )
 
 
 @router.post("/debug/query")
 async def debug_query(body: DebugQueryRequest, access: RequiredAccess):
-    """
-    检索调试接口（成员3后台联调）。
-    需具备调试权限；默认不返回敏感完整正文。
-    """
+    """检索调试接口（成员3后台联调）。"""
     access = _enrich_access(access)
     if not (
         access.has_permission("system.configure")
@@ -257,7 +381,6 @@ async def debug_query(body: DebugQueryRequest, access: RequiredAccess):
         access.scope_hash = compute_scope_hash(access)
 
     state = _graph.run(body.content, access, trace_id=f"dbg_{uuid.uuid4().hex[:10]}")
-    # 脱敏：去掉 quote 全文
     safe_ctx = []
     for snip in state.selected_context:
         safe_ctx.append(
@@ -308,10 +431,11 @@ async def invalidate_by_event(event: dict[str, Any], access: RequiredAccess):
 
         raise AuthorizationError(message="需要系统配置权限")
     result = _invalidator.handle_event(event)
+    if result.get("invalidated"):
+        inc_cache("invalidate")
     return success_response(data=result)
 
 
-# 标准问答只读占位，写操作归属成员7
 @router.get("/standard")
 async def list_standard_qa(
     access: RequiredAccess,

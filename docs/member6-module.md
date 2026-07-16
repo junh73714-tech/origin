@@ -47,4 +47,5 @@
 
 1. 真实 LLM / Reranker 未绑定（当前 Mock，is_mock=True）
 2. 成员4/5/7 正式服务未合入，使用适配器与测试替身
-3. 会话默认 InMemory，生产需切换 SQLAlchemy 仓储写入新表
+3. 会话/QueryLog/Citation 当前为进程内存储（结构已对齐表模型）；生产需切换 SQLAlchemy 写库
+4. OpenSearch/pgvector 生产客户端需接成员5索引；API 默认空内存索引用于联调替身

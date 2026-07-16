@@ -49,12 +49,29 @@ class RetrievalFilter(BaseModel):
                     }
                 }
             )
+        # 无任何数据范围且无临时授权时，强制空结果（默认拒绝，召回前生效）
+        if (
+            not self.knowledge_base_ids
+            and not self.allow_document_ids
+            and not self.temporary_grant_document_ids
+        ):
+            filters.append({"terms": {"document_id": ["__no_access__"]}})
+            return filters
+
         if self.knowledge_base_ids:
             filters.append({"terms": {"knowledge_base_id": self.knowledge_base_ids}})
         if self.deny_document_ids:
             filters.append(
                 {"bool": {"must_not": [{"terms": {"document_id": self.deny_document_ids}}]}}
             )
+        # 允许集合 = 文档白名单 ∪ 临时授权；白名单非空时必须落入该并集
+        allow_union = list(
+            dict.fromkeys([*self.allow_document_ids, *self.temporary_grant_document_ids])
+        )
+        if self.allow_document_ids:
+            filters.append({"terms": {"document_id": allow_union}})
+        elif self.temporary_grant_document_ids and not self.knowledge_base_ids:
+            filters.append({"terms": {"document_id": self.temporary_grant_document_ids}})
         if self.max_confidentiality_level >= 0:
             filters.append(
                 {

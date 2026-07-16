@@ -6,8 +6,10 @@
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
+from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from app.core.security import AccessContext
@@ -28,8 +30,32 @@ class PermissionServiceProtocol(Protocol):
     def can_open_citation(self, access: AccessContext, citation: dict[str, Any]) -> bool: ...
 
 
+def _active_temporary_grants(access: AccessContext) -> list[dict[str, Any]]:
+    now = datetime.now(timezone.utc)
+    active: list[dict[str, Any]] = []
+    for g in getattr(access, "temporary_grants", None) or []:
+        if not isinstance(g, dict) or not g.get("document_id"):
+            continue
+        exp = g.get("expires_at") or g.get("expiration_time")
+        if exp:
+            try:
+                if isinstance(exp, str):
+                    exp_dt = datetime.fromisoformat(exp.replace("Z", "+00:00"))
+                else:
+                    continue
+                if exp_dt.tzinfo is None:
+                    exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                if exp_dt <= now:
+                    continue
+            except ValueError:
+                continue
+        active.append(g)
+    return active
+
+
 def compute_scope_hash(access: AccessContext) -> str:
     """由规范化权限范围生成稳定摘要，不含可逆敏感数据。"""
+    grants = _active_temporary_grants(access)
     payload = {
         "tenant_id": access.tenant_id,
         "user_id": access.user_id,
@@ -47,29 +73,21 @@ def compute_scope_hash(access: AccessContext) -> str:
         "regions": sorted(getattr(access, "regions", []) or []),
         "max_confidentiality_level": getattr(access, "max_confidentiality_level", 0),
         "deny_document_ids": sorted(getattr(access, "deny_document_ids", []) or []),
+        "temporary_grants": sorted(
+            {
+                f"{g.get('document_id')}:{g.get('expires_at') or g.get('expiration_time') or ''}"
+                for g in grants
+            }
+        ),
     }
     raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
 
 
 def ensure_access_snapshot(access: AccessContext) -> AccessContext:
-    """返回不可变快照（通过重新构造切断外部可变引用）。"""
-    data = access.to_dict()
+    """返回深拷贝不可变快照。"""
+    data = copy.deepcopy(access.to_dict())
     snap = AccessContext.from_dict(data)
-    for attr in (
-        "role_ids",
-        "department_ids",
-        "group_ids",
-        "knowledge_base_ids",
-        "project_ids",
-        "regions",
-        "max_confidentiality_level",
-        "deny_document_ids",
-        "temporary_grants",
-        "scope_hash",
-    ):
-        if hasattr(access, attr):
-            setattr(snap, attr, getattr(access, attr))
     if not getattr(snap, "scope_hash", None):
         snap.scope_hash = compute_scope_hash(snap)
     return snap
@@ -99,9 +117,9 @@ class DefaultPermissionAdapter:
             kb_ids = list((access.data_scopes or {}).get("knowledge_base", []) or [])
         deny = list(getattr(access, "deny_document_ids", None) or [])
         allow = list((access.data_scopes or {}).get("document", []) or [])
-        # 系统管理员也不自动放行全部文档
         if "*" in allow:
             allow = [x for x in allow if x != "*"]
+        temp_ids = [g["document_id"] for g in _active_temporary_grants(access)]
         return RetrievalFilter(
             tenant_id=access.tenant_id,
             knowledge_base_ids=[x for x in kb_ids if x != "*"],
@@ -114,11 +132,7 @@ class DefaultPermissionAdapter:
             ),
             deny_document_ids=deny,
             allow_document_ids=allow,
-            temporary_grant_document_ids=[
-                g.get("document_id")
-                for g in (getattr(access, "temporary_grants", None) or [])
-                if isinstance(g, dict) and g.get("document_id")
-            ],
+            temporary_grant_document_ids=temp_ids,
             scope_hash=getattr(access, "scope_hash", "") or compute_scope_hash(access),
         )
 
@@ -138,30 +152,29 @@ class DefaultPermissionAdapter:
             return False
         if chunk.get("is_current_version") is False:
             return False
-        allow = set((access.data_scopes or {}).get("document", []) or [])
-        kb_allow = set(
-            getattr(access, "knowledge_base_ids", None)
-            or (access.data_scopes or {}).get("knowledge_base", [])
-            or []
-        )
-        temp = {
-            g.get("document_id")
-            for g in (getattr(access, "temporary_grants", None) or [])
-            if isinstance(g, dict)
+
+        allow = {x for x in ((access.data_scopes or {}).get("document", []) or []) if x != "*"}
+        kb_allow = {
+            x
+            for x in (
+                getattr(access, "knowledge_base_ids", None)
+                or (access.data_scopes or {}).get("knowledge_base", [])
+                or []
+            )
+            if x != "*"
         }
+        temp = {g.get("document_id") for g in _active_temporary_grants(access)}
+
         if doc_id in temp:
             return True
-        if allow and doc_id not in allow and "*" not in allow:
-            # 若配置了文档白名单则必须命中；未配置时回退知识库范围
-            if not kb_allow:
-                return False
-        kb_id = chunk.get("knowledge_base_id") or ""
-        if kb_allow and "*" not in kb_allow and kb_id and kb_id not in kb_allow:
+        # 文档白名单非空时必须命中（不再因 kb_allow 存在而绕过）
+        if allow and doc_id not in allow:
             return False
-        # 默认拒绝：无任何数据范围时不允许访问业务文档
-        if not allow and not kb_allow and doc_id not in temp:
-            if access.is_super_admin():
-                return False
+        kb_id = chunk.get("knowledge_base_id") or ""
+        if kb_allow and kb_id and kb_id not in kb_allow:
+            return False
+        # 默认拒绝：无文档白名单、无知识库范围、无临时授权
+        if not allow and not kb_allow:
             return False
         return True
 
@@ -169,14 +182,21 @@ class DefaultPermissionAdapter:
         if qa.get("status") != "published":
             return False
         kb_id = qa.get("knowledge_base_id") or ""
-        kb_allow = set(
-            getattr(access, "knowledge_base_ids", None)
-            or (access.data_scopes or {}).get("knowledge_base", [])
-            or []
-        )
-        if kb_allow and "*" not in kb_allow and kb_id not in kb_allow:
+        kb_allow = {
+            x
+            for x in (
+                getattr(access, "knowledge_base_ids", None)
+                or (access.data_scopes or {}).get("knowledge_base", [])
+                or []
+            )
+            if x != "*"
+        }
+        if kb_allow and kb_id not in kb_allow:
             return False
         source_docs = qa.get("source_document_ids") or []
+        if not source_docs:
+            # 无来源文档时仅按知识库范围；仍默认拒绝空范围
+            return bool(kb_allow) or bool(_active_temporary_grants(access))
         for doc_id in source_docs:
             if not self.can_access_chunk(
                 access,
@@ -199,7 +219,7 @@ class DefaultPermissionAdapter:
                 "tenant_id": citation.get("tenant_id") or access.tenant_id,
                 "document_id": citation.get("document_id"),
                 "knowledge_base_id": citation.get("knowledge_base_id"),
-                "status": citation.get("source_status") or "published",
+                "status": citation.get("source_status") or citation.get("status") or "published",
                 "is_current_version": citation.get("is_current_version", True),
                 "confidentiality_level": citation.get("confidentiality_level", 0),
             },
