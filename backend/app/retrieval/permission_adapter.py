@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from app.core.security import AccessContext
-from app.retrieval.types import RetrievalFilter, RetrievalHit
+from app.retrieval.types import RetrievalFilter, RetrievalHit, TemporaryGrantRef
 
 
 class PermissionServiceProtocol(Protocol):
@@ -30,26 +30,59 @@ class PermissionServiceProtocol(Protocol):
     def can_open_citation(self, access: AccessContext, citation: dict[str, Any]) -> bool: ...
 
 
-def _active_temporary_grants(access: AccessContext) -> list[dict[str, Any]]:
+def _parse_grant_time(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, str):
+        try:
+            dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    return None
+
+
+def _normalize_temporary_grant(raw: Any) -> TemporaryGrantRef | None:
+    """兼容成员4 TemporaryGrantInfo 与本地 {document_id, expires_at} 字典。"""
+    if isinstance(raw, TemporaryGrantRef):
+        return raw
+    if not isinstance(raw, dict):
+        return None
+
+    resource_type = str(raw.get("resource_type") or "document")
+    resource_id = raw.get("resource_id") or raw.get("document_id")
+    if not resource_id:
+        return None
+    # 仅文档临时授权参与检索文档 ID 过滤
+    if resource_type != "document":
+        return None
+
+    return TemporaryGrantRef(
+        resource_type=resource_type,
+        resource_id=str(resource_id),
+        permission_type=str(raw.get("permission_type") or "read"),
+        effective_time=_parse_grant_time(raw.get("effective_time")),
+        expiration_time=_parse_grant_time(
+            raw.get("expiration_time") or raw.get("expires_at")
+        ),
+    )
+
+
+def _active_temporary_grants(access: AccessContext) -> list[TemporaryGrantRef]:
+    """返回当前仍有效的临时授权对象列表（对齐成员4 effective_temporary_grants）。"""
     now = datetime.now(timezone.utc)
-    active: list[dict[str, Any]] = []
-    for g in getattr(access, "temporary_grants", None) or []:
-        if not isinstance(g, dict) or not g.get("document_id"):
+    active: list[TemporaryGrantRef] = []
+    for raw in getattr(access, "temporary_grants", None) or []:
+        grant = _normalize_temporary_grant(raw)
+        if grant is None:
             continue
-        exp = g.get("expires_at") or g.get("expiration_time")
-        if exp:
-            try:
-                if isinstance(exp, str):
-                    exp_dt = datetime.fromisoformat(exp.replace("Z", "+00:00"))
-                else:
-                    continue
-                if exp_dt.tzinfo is None:
-                    exp_dt = exp_dt.replace(tzinfo=timezone.utc)
-                if exp_dt <= now:
-                    continue
-            except ValueError:
-                continue
-        active.append(g)
+        if grant.effective_time and grant.effective_time > now:
+            continue
+        if grant.expiration_time and grant.expiration_time <= now:
+            continue
+        active.append(grant)
     return active
 
 
@@ -75,7 +108,7 @@ def compute_scope_hash(access: AccessContext) -> str:
         "deny_document_ids": sorted(getattr(access, "deny_document_ids", []) or []),
         "temporary_grants": sorted(
             {
-                f"{g.get('document_id')}:{g.get('expires_at') or g.get('expiration_time') or ''}"
+                f"{g.resource_type}:{g.resource_id}:{g.expiration_time.isoformat() if g.expiration_time else ''}"
                 for g in grants
             }
         ),
@@ -119,9 +152,10 @@ class DefaultPermissionAdapter:
         allow = list((access.data_scopes or {}).get("document", []) or [])
         if "*" in allow:
             allow = [x for x in allow if x != "*"]
-        temp_ids = [g["document_id"] for g in _active_temporary_grants(access)]
+        grants = _active_temporary_grants(access)
         return RetrievalFilter(
             tenant_id=access.tenant_id,
+            user_id=access.user_id,
             knowledge_base_ids=[x for x in kb_ids if x != "*"],
             department_ids=list(getattr(access, "department_ids", []) or []),
             group_ids=list(getattr(access, "group_ids", []) or []),
@@ -132,7 +166,7 @@ class DefaultPermissionAdapter:
             ),
             deny_document_ids=deny,
             allow_document_ids=allow,
-            temporary_grant_document_ids=temp_ids,
+            effective_temporary_grants=grants,
             scope_hash=getattr(access, "scope_hash", "") or compute_scope_hash(access),
         )
 
@@ -163,7 +197,7 @@ class DefaultPermissionAdapter:
             )
             if x != "*"
         }
-        temp = {g.get("document_id") for g in _active_temporary_grants(access)}
+        temp = {g.document_id for g in _active_temporary_grants(access) if g.document_id}
 
         if doc_id in temp:
             return True

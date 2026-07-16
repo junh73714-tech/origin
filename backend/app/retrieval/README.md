@@ -9,7 +9,8 @@
 
 ## 关键类型
 
-- `RetrievalFilter`：与 AccessContext 对齐的统一过滤语义
+- `RetrievalFilter`：与 AccessContext / 成员4 对齐的统一过滤语义（含 `user_id`）
+- `TemporaryGrantRef`：临时授权对象，对齐成员4 `TemporaryGrantInfo`；过滤时用属性 `temporary_grant_document_ids` 提取文档 ID
 - `RetrievalHit`：双路统一候选结构
 
 ## 权限
