@@ -13,25 +13,25 @@ import { AdminLayout } from '@/layouts';
 // 管理后台页面
 import {
   Dashboard,
-  // 用户与组织
-  UserManage,
-  DepartmentManage,
+  // 用户与组织（M2 已实现）
+  UserManagement,
+  DepartmentManagement,
   UserGroupManage,
-  RoleManage,
+  RoleManagement,
   TempAuthManage,
-  // 权限中心
+  // 权限中心（M2 占位）
   PermissionManage,
   DataPermissionManage,
   KBAuthManage,
   DocClassification,
   PermissionRules,
   PermissionAudit,
-  // 知识库与文档
+  // 知识库与文档（M2 已实现）
   AdminKBList,
   AdminDocList,
   DocVersionManage,
   ChunkView,
-  IndexTaskManage,
+  IndexTaskManagement,
   // 问答优化
   CandidateQA,
   PendingReview,
@@ -115,10 +115,10 @@ export const routes: RouteObject[] = [
       { path: 'dashboard', element: <Dashboard /> },
 
       // 用户与组织
-      { path: 'users', element: <UserManage /> },
-      { path: 'departments', element: <DepartmentManage /> },
+      { path: 'users', element: <UserManagement /> },
+      { path: 'departments', element: <DepartmentManagement /> },
       { path: 'user-groups', element: <UserGroupManage /> },
-      { path: 'roles', element: <RoleManage /> },
+      { path: 'roles', element: <RoleManagement /> },
       { path: 'temp-auth', element: <TempAuthManage /> },
 
       // 权限中心
@@ -134,7 +134,7 @@ export const routes: RouteObject[] = [
       { path: 'documents', element: <AdminDocList /> },
       { path: 'document-versions', element: <DocVersionManage /> },
       { path: 'chunks', element: <ChunkView /> },
-      { path: 'index-tasks', element: <IndexTaskManage /> },
+      { path: 'index-tasks', element: <IndexTaskManagement /> },
 
       // 问答优化
       { path: 'candidate-qa', element: <CandidateQA /> },

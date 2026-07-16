@@ -4,9 +4,17 @@
  */
 export { Dashboard } from './Dashboard';
 
-// 以下是占位页面，将在后续里程碑中逐步实现
-// 占位组件用于路由注册，在 M2/M3/M4 中替换为实际页面
+// ========== M2: 用户与组织（已实现） ==========
+export { UserManagement } from './UserManagement';
+export { DepartmentManagement } from './DepartmentManagement';
+export { RoleManagement } from './RoleManagement';
 
+// ========== M2: 知识库与文档（已实现） ==========
+export { AdminKBList } from './AdminKBList';
+export { AdminDocList } from './AdminDocList';
+export { IndexTaskManagement } from './IndexTaskManagement';
+
+// 以下 M2 页面和 M3/M4 页面为占位，将在后续里程碑中逐步实现
 import { Typography } from 'antd';
 import { ToolOutlined } from '@ant-design/icons';
 
@@ -29,14 +37,11 @@ function createPlaceholderPage(title: string, description: string) {
   };
 }
 
-// ========== 用户与组织 ==========
-export const UserManage = createPlaceholderPage('用户管理', '用户列表、创建、编辑、启用/禁用');
-export const DepartmentManage = createPlaceholderPage('部门管理', '部门树形结构管理');
+// ========== M2 剩余：用户与组织 ==========
 export const UserGroupManage = createPlaceholderPage('用户组管理', '用户组创建与成员管理');
-export const RoleManage = createPlaceholderPage('角色管理', '角色定义、权限分配');
 export const TempAuthManage = createPlaceholderPage('临时授权', '临时权限授予与有效期管理');
 
-// ========== 权限中心 ==========
+// ========== M2 剩余：权限中心 ==========
 export const PermissionManage = createPlaceholderPage('功能权限', '功能权限定义与分配');
 export const DataPermissionManage = createPlaceholderPage('数据权限', '数据范围权限规则');
 export const KBAuthManage = createPlaceholderPage('知识库授权', '知识库访问权限管理');
@@ -44,12 +49,9 @@ export const DocClassification = createPlaceholderPage('文档密级', '文档�
 export const PermissionRules = createPlaceholderPage('权限规则', 'ABAC 权限规则配置');
 export const PermissionAudit = createPlaceholderPage('权限审计', '权限使用审计记录');
 
-// ========== 知识库与文档 ==========
-export const AdminKBList = createPlaceholderPage('知识库列表', '知识库创建、编辑、删除、授权');
-export const AdminDocList = createPlaceholderPage('文档管理', '文档上传、列表、状态管理');
+// ========== M2 剩余：知识库与文档 ==========
 export const DocVersionManage = createPlaceholderPage('文档版本', '文档版本历史与切换');
 export const ChunkView = createPlaceholderPage('Chunk 查看', '文档分块内容查看');
-export const IndexTaskManage = createPlaceholderPage('索引任务', '索引任务状态与重试');
 
 // ========== 问答优化 ==========
 export const CandidateQA = createPlaceholderPage('候选问答', '自动生成的候选问答列表');
