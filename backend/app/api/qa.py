@@ -5,6 +5,7 @@
 from fastapi import APIRouter
 
 router = APIRouter()
+qa_router = router
 
 # TODO: 由成员6实现
 # - POST /chat - 问答对话

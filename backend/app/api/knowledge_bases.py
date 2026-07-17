@@ -27,6 +27,7 @@ from app.schemas.document import (
 from app.services.knowledge_base import KnowledgeBaseService
 
 router = APIRouter()
+knowledge_bases_router = router
 
 
 def get_kb_service(db: DBSession) -> KnowledgeBaseService:

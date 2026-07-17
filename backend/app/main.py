@@ -68,12 +68,28 @@ def register_routes(app: FastAPI) -> None:
     from app.api.qa import router as qa_router
     from app.api.feedback import router as feedback_router
     from app.api.index_tasks import router as index_tasks_router
+    from app.api.organization import router as organization_router
+    from app.api.rbac import router as rbac_router
+    from app.api.data_permission import router as data_permission_router
+    from app.api.audit import router as audit_router
 
     # 健康检查
     app.include_router(health_router, prefix="/api/v1", tags=["健康检查"])
 
     # 认证
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["认证"])
+
+    # 组织管理
+    app.include_router(organization_router, prefix="/api/v1/organization", tags=["组织管理"])
+
+    # RBAC
+    app.include_router(rbac_router, prefix="/api/v1/rbac", tags=["RBAC"])
+
+    # 数据权限
+    app.include_router(data_permission_router, prefix="/api/v1/data-permission", tags=["数据权限"])
+
+    # 审计
+    app.include_router(audit_router, prefix="/api/v1/audit", tags=["审计"])
 
     # 知识库
     app.include_router(knowledge_bases_router, prefix="/api/v1/knowledge-bases", tags=["知识库"])

@@ -45,9 +45,6 @@ class KnowledgeBase(BaseModel):
     documents: Mapped[list["Document"]] = relationship(
         "Document", back_populates="knowledge_base", lazy="selectin"
     )
-    permissions: Mapped[list["KnowledgeBasePermission"]] = relationship(
-        "KnowledgeBasePermission", back_populates="knowledge_base", lazy="selectin"
-    )
 
     __table_args__ = (
         Index("ix_knowledge_bases_tenant_name", "tenant_id", "name"),
@@ -56,57 +53,6 @@ class KnowledgeBase(BaseModel):
 
     def __repr__(self) -> str:
         return f"<KnowledgeBase {self.name} [{self.status}]>"
-
-
-class KnowledgeBasePermission(BaseModel):
-    """知识库权限模型
-
-    记录知识库级别的权限配置。
-    权限规则由成员4定义，本模型只存储权限绑定关系。
-    """
-
-    __tablename__ = "knowledge_base_permissions"
-
-    knowledge_base_id: Mapped[str] = mapped_column(
-        String(64),
-        ForeignKey("knowledge_bases.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-        comment="知识库ID",
-    )
-    principal_type: Mapped[str] = mapped_column(
-        String(50), nullable=False, comment="主体类型: user/role/department/user_group"
-    )
-    principal_id: Mapped[str] = mapped_column(
-        String(64), nullable=False, comment="主体ID"
-    )
-    permission_type: Mapped[str] = mapped_column(
-        String(50), nullable=False, comment="权限类型: read/write/admin"
-    )
-    is_deny: Mapped[bool] = mapped_column(
-        default=False, nullable=False, comment="是否为显式拒绝"
-    )
-    effective_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, comment="生效时间"
-    )
-    expiration_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, comment="失效时间"
-    )
-
-    # 关系
-    knowledge_base: Mapped["KnowledgeBase"] = relationship(
-        "KnowledgeBase", back_populates="permissions"
-    )
-
-    __table_args__ = (
-        Index(
-            "ix_kb_permissions_lookup",
-            "knowledge_base_id", "principal_type", "principal_id",
-        ),
-    )
-
-    def __repr__(self) -> str:
-        return f"<KnowledgeBasePermission {self.permission_type} {self.principal_type}:{self.principal_id}>"
 
 
 # =============================================================================
@@ -179,9 +125,6 @@ class Document(BaseModel):
     chunks: Mapped[list["DocumentChunk"]] = relationship(
         "DocumentChunk", back_populates="document", lazy="selectin"
     )
-    permissions: Mapped[list["DocumentPermission"]] = relationship(
-        "DocumentPermission", back_populates="document", lazy="selectin"
-    )
     process_logs: Mapped[list["DocumentProcessLog"]] = relationship(
         "DocumentProcessLog", back_populates="document", lazy="selectin"
     )
@@ -194,57 +137,6 @@ class Document(BaseModel):
 
     def __repr__(self) -> str:
         return f"<Document {self.name} [{self.status}] v{self.current_version}>"
-
-
-class DocumentPermission(BaseModel):
-    """文档权限模型
-
-    记录文档级别的权限配置。
-    文档权限继承知识库权限，Chunk权限继承文档权限。
-    """
-
-    __tablename__ = "document_permissions"
-
-    document_id: Mapped[str] = mapped_column(
-        String(64),
-        ForeignKey("documents.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-        comment="文档ID",
-    )
-    principal_type: Mapped[str] = mapped_column(
-        String(50), nullable=False, comment="主体类型: user/role/department/user_group"
-    )
-    principal_id: Mapped[str] = mapped_column(
-        String(64), nullable=False, comment="主体ID"
-    )
-    permission_type: Mapped[str] = mapped_column(
-        String(50), nullable=False, comment="权限类型: read/write/admin"
-    )
-    is_deny: Mapped[bool] = mapped_column(
-        default=False, nullable=False, comment="是否为显式拒绝"
-    )
-    effective_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, comment="生效时间"
-    )
-    expiration_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, comment="失效时间"
-    )
-
-    # 关系
-    document: Mapped["Document"] = relationship(
-        "Document", back_populates="permissions"
-    )
-
-    __table_args__ = (
-        Index(
-            "ix_doc_permissions_lookup",
-            "document_id", "principal_type", "principal_id",
-        ),
-    )
-
-    def __repr__(self) -> str:
-        return f"<DocumentPermission {self.permission_type} {self.principal_type}:{self.principal_id}>"
 
 
 # =============================================================================

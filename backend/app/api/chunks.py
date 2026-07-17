@@ -15,6 +15,7 @@ from app.models.document import DocumentChunk
 from app.schemas.document import ChunkDetailResponse, ChunkResponse, ChunkListParams
 
 router = APIRouter()
+chunks_router = router
 
 
 @router.get("", summary="Chunk列表")

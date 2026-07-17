@@ -7,13 +7,12 @@ from app.models.auth import Permission, Role, Session, role_permissions, user_ro
 from app.models.document import (
     Document,
     DocumentChunk,
-    DocumentPermission,
     DocumentProcessLog,
     DocumentVersion,
     IndexTask,
     KnowledgeBase,
-    KnowledgeBasePermission,
 )
+from app.models.identity import KnowledgeBasePermission, DocumentPermission
 from app.models.qa import (
     CandidateQA,
     Conversation,
