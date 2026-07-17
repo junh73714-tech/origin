@@ -205,7 +205,9 @@ async def create_role(
 async def get_role_by_id(db: AsyncSession, role_id: str) -> Role | None:
     """根据ID获取角色"""
     result = await db.execute(
-        select(Role).filter(
+        select(Role)
+        .options(selectinload(Role.permissions))
+        .filter(
             and_(
                 Role.id == role_id,
                 Role.deleted_at.is_(None),
@@ -249,10 +251,20 @@ async def list_roles(
     query = query.order_by(Role.is_system.desc(), Role.created_at.desc())
     query = query.offset((page - 1) * page_size).limit(page_size)
 
-    result = await db.execute(query)
+    result = await db.execute(query.options(selectinload(Role.permissions)))
     roles = result.scalars().all()
 
-    items = [RoleResponse.model_validate(r) for r in roles]
+    items = []
+    for role in roles:
+        role_response = RoleResponse.model_validate(role)
+        role_response.permission_count = len(role.permissions)
+        
+        user_count_result = await db.execute(
+            select(func.count(user_roles.user_id)).filter(user_roles.role_id == role.id)
+        )
+        role_response.user_count = user_count_result.scalar_one()
+        
+        items.append(role_response)
 
     return PaginatedData.create(items, total, page, page_size)
 

@@ -20,17 +20,17 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """应用生命周期管理"""
     # 启动
-    logger.info("application_starting", app_name=settings.app.name)
+    logger.info("application_starting", app_name=settings.name)
     setup_logging()
     await init_db()
-    logger.info("application_started", app_name=settings.app.name)
+    logger.info("application_started", app_name=settings.name)
 
     yield
 
     # 关闭
-    logger.info("application_stopping", app_name=settings.app.name)
+    logger.info("application_stopping", app_name=settings.name)
     await close_db()
-    logger.info("application_stopped", app_name=settings.app.name)
+    logger.info("application_stopped", app_name=settings.name)
 
 
 def create_app() -> FastAPI:
@@ -61,16 +61,17 @@ def create_app() -> FastAPI:
 def register_routes(app: FastAPI) -> None:
     """注册路由"""
     from app.api.common import health_router
-    from app.api.auth import auth_router
-    from app.api.documents import documents_router
-    from app.api.chunks import chunks_router
-    from app.api.knowledge_bases import knowledge_bases_router
-    from app.api.qa import qa_router
-    from app.api.feedback import feedback_router
-    from app.api.organization import organization_router
-    from app.api.rbac import rbac_router
-    from app.api.data_permission import data_permission_router
-    from app.api.audit import audit_router
+    from app.api.auth import router as auth_router
+    from app.api.documents import router as documents_router
+    from app.api.chunks import router as chunks_router
+    from app.api.knowledge_bases import router as knowledge_bases_router
+    from app.api.qa import router as qa_router
+    from app.api.feedback import router as feedback_router
+    from app.api.index_tasks import router as index_tasks_router
+    from app.api.organization import router as organization_router
+    from app.api.rbac import router as rbac_router
+    from app.api.data_permission import router as data_permission_router
+    from app.api.audit import router as audit_router
 
     # 健康检查
     app.include_router(health_router, prefix="/api/v1", tags=["健康检查"])
@@ -79,16 +80,16 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["认证"])
 
     # 组织管理
-    app.include_router(organization_router, prefix="/api/v1", tags=["组织管理"])
+    app.include_router(organization_router, prefix="/api/v1/organization", tags=["组织管理"])
 
     # RBAC
-    app.include_router(rbac_router, prefix="/api/v1", tags=["RBAC"])
+    app.include_router(rbac_router, prefix="/api/v1/rbac", tags=["RBAC"])
 
     # 数据权限
-    app.include_router(data_permission_router, prefix="/api/v1", tags=["数据权限"])
+    app.include_router(data_permission_router, prefix="/api/v1/data-permission", tags=["数据权限"])
 
     # 审计
-    app.include_router(audit_router, prefix="/api/v1", tags=["审计"])
+    app.include_router(audit_router, prefix="/api/v1/audit", tags=["审计"])
 
     # 知识库
     app.include_router(knowledge_bases_router, prefix="/api/v1/knowledge-bases", tags=["知识库"])
@@ -98,6 +99,9 @@ def register_routes(app: FastAPI) -> None:
 
     # Chunk
     app.include_router(chunks_router, prefix="/api/v1/chunks", tags=["文档片段"])
+
+    # 索引任务
+    app.include_router(index_tasks_router, prefix="/api/v1/index-tasks", tags=["索引任务"])
 
     # 问答
     app.include_router(qa_router, prefix="/api/v1/qa", tags=["问答"])

@@ -39,9 +39,11 @@ class DepartmentResponse(BaseSchema):
     name: str
     code: str
     parent_id: str | None = None
+    parent_name: str | None = None
     description: str | None = None
     status: str
     sort_order: int
+    member_count: int = 0
     created_at: datetime
     updated_at: datetime
     created_by: str
@@ -80,6 +82,7 @@ class UserGroupResponse(BaseSchema):
     code: str
     description: str | None = None
     status: str
+    member_count: int = 0
     created_at: datetime
     updated_at: datetime
     created_by: str

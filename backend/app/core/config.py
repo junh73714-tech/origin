@@ -151,6 +151,7 @@ class AppSettings(BaseSettings):
     log_level: str = "INFO"
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
+    # 子配置（添加类型注解以兼容 Pydantic v2）
     database: DatabaseSettings = DatabaseSettings()
     redis: RedisSettings = RedisSettings()
     minio: MinIOSettings = MinIOSettings()

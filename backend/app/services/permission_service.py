@@ -41,8 +41,27 @@ class PermissionService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_access_context(self, user_id: str) -> AccessContextResponse:
-        """获取用户访问上下文快照"""
+    async def get_access_context(
+        self,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
+        resource_type: str | None = None,
+        resource_id: str | None = None,
+    ) -> AccessContextResponse:
+        """获取用户访问上下文快照
+
+        Args:
+            tenant_id: 租户ID
+            user_id: 用户ID
+            resource_type: 资源类型（如 document, knowledge_base）
+            resource_id: 资源ID
+
+        Returns:
+            AccessContextResponse: 访问上下文响应
+        """
+        if not user_id:
+            raise AuthorizationError(message="用户ID不能为空")
+
         user = await self._get_user_with_relations(user_id)
         if not user:
             raise AuthorizationError(message="用户不存在")
@@ -121,7 +140,7 @@ class PermissionService:
 
     async def build_retrieval_filters(self, user_id: str) -> RetrievalFilter:
         """构建检索过滤条件"""
-        context = await self.get_access_context(user_id)
+        context = await self.get_access_context(user_id=user_id)
         return self._build_retrieval_filter_from_context(context)
 
     def _build_retrieval_filter_from_context(self, context: AccessContextResponse) -> RetrievalFilter:
@@ -148,6 +167,9 @@ class PermissionService:
         """
         同步构建检索过滤条件（供成员6适配层调用）
         协议签名: build_retrieval_filters(access: AccessContext) -> RetrievalFilter
+        
+        注意：成员6正式接入推荐使用 get_access_context + async build_retrieval_filters
+        此同步方法仅作为兼容层，字段与异步版本保持一致
         """
         temp_grants = access.data_scopes.get("temporary_grants", [])
         effective_grants = [
@@ -166,15 +188,15 @@ class PermissionService:
             tenant_id=access.tenant_id,
             user_id=access.user_id,
             knowledge_base_ids=access.data_scopes.get("knowledge_base", []),
-            department_ids=[],
-            group_ids=[],
-            project_ids=[],
-            regions=[],
-            max_confidentiality_level=0,
-            deny_document_ids=[],
-            allow_document_ids=[],
+            department_ids=access.data_scopes.get("department", []),
+            group_ids=access.data_scopes.get("group", []),
+            project_ids=access.data_scopes.get("project", []),
+            regions=access.data_scopes.get("region", []),
+            max_confidentiality_level=access.data_scopes.get("max_confidentiality_level", 0),
+            deny_document_ids=access.data_scopes.get("deny_document_ids", []),
+            allow_document_ids=access.data_scopes.get("allow_document_ids", []),
             effective_temporary_grants=effective_grants,
-            scope_hash="",
+            scope_hash=access.data_scopes.get("scope_hash", ""),
         )
 
     async def build_opensearch_filter(self, user_id: str) -> OpenSearchFilterDSL:
@@ -284,6 +306,55 @@ class PermissionService:
             where_clause=where_clause,
             params=params,
         )
+
+    async def check_permission(
+        self,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
+        action: str | None = None,
+        resource_type: str | None = None,
+        resource_id: str | None = None,
+    ) -> bool:
+        """检查用户是否有权限执行指定操作
+
+        Args:
+            tenant_id: 租户ID
+            user_id: 用户ID
+            action: 操作权限编码（如 document:read, knowledge_base:write）
+            resource_type: 资源类型（如 document, knowledge_base）
+            resource_id: 资源ID
+
+        Returns:
+            bool: 是否有权限
+        """
+        if not user_id:
+            return False
+
+        user = await self._get_user_with_relations(user_id)
+        if not user:
+            return False
+
+        if tenant_id and user.tenant_id != tenant_id:
+            return False
+
+        permissions = set()
+        for role in user.roles:
+            for perm in role.permissions:
+                permissions.add(perm.code)
+
+        if "*" in permissions:
+            return True
+
+        if action and action not in permissions:
+            return False
+
+        if resource_type and resource_id:
+            if resource_type == "knowledge_base":
+                return await self.can_access_knowledge_base(user_id, resource_id)
+            elif resource_type == "document":
+                return await self.can_access_document(user_id, resource_id)
+
+        return True
 
     async def can_execute_action(self, user_id: str, action: str) -> bool:
         """检查用户是否可以执行指定操作"""

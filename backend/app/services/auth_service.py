@@ -11,7 +11,7 @@ from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.exceptions import AuthenticationError, AuthorizationError, ResourceNotFoundError
+from app.core.exceptions import AuthenticationError, AuthorizationError, LoginLockedError, ResourceNotFoundError
 from app.core.logging import get_logger
 from app.core.security import (
     AccessContext,
@@ -20,6 +20,7 @@ from app.core.security import (
     get_password_hash,
     verify_password,
     verify_token,
+    pwd_context,
 )
 from app.models.auth import Session
 from app.models.identity import LoginLog
@@ -203,9 +204,9 @@ async def login(
             ip_address=ip_address,
             user_agent=user_agent,
         )
-        raise AuthenticationError(
+        raise LoginLockedError(
             message="账号已被锁定，请稍后再试",
-            details={"retry_after": LOGIN_LOCKOUT_DURATION_MINUTES * 60},
+            retry_after=LOGIN_LOCKOUT_DURATION_MINUTES * 60,
         )
 
     user = await get_user_by_username(db, username)
@@ -230,6 +231,11 @@ async def login(
             user_agent=user_agent,
         )
         raise AuthenticationError(message="用户名或密码错误")
+
+    if not pwd_context.identify(user.password_hash) == "argon2":
+        user.password_hash = get_password_hash(password)
+        await db.flush()
+        logger.info("password_algorithm_upgraded", user_id=user.id, from_algorithm="bcrypt", to_algorithm="argon2")
 
     access_context = await get_user_access_context(db, user)
 
@@ -262,6 +268,9 @@ async def login(
         user_agent=user_agent,
         session_id=session.id,
     )
+
+    user.last_login_at = datetime.now(timezone.utc)
+    await db.flush()
 
     logger.info("login_success", user_id=user.id, username=username, ip_address=ip_address)
 
@@ -337,7 +346,15 @@ async def get_current_user(db: AsyncSession, user_id: str) -> UserResponse:
     if not user:
         raise ResourceNotFoundError(resource_type="用户", resource_id=user_id)
 
-    return UserResponse.model_validate(user)
+    user_response = UserResponse.model_validate(user)
+    
+    if user.departments:
+        primary_dept = next((d for d in user.departments), None)
+        if primary_dept:
+            user_response.department_id = primary_dept.id
+            user_response.department_name = primary_dept.name
+
+    return user_response
 
 
 async def register_user(db: AsyncSession, register_data: dict[str, Any]) -> UserResponse:

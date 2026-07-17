@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Query
 from app.core.dependencies import DBSession, RequiredUser
 from app.core.responses import paginated_response, success_response
 from app.schemas.common import PaginationParams
-from app.schemas.auth import RoleResponse, PermissionResponse
+from app.schemas.auth import PermissionCreate, RoleCreate, RoleResponse, PermissionResponse
 from app.schemas.identity import (
     DataScopeCreate,
     DataScopeResponse,
@@ -48,17 +48,19 @@ rbac_router = APIRouter()
 
 @rbac_router.post("/permissions", response_model=PermissionResponse, tags=["RBAC"])
 async def create_permission_api(
+    create_data: PermissionCreate,
     db: DBSession,
     current_user_id: RequiredUser,
-    name: str = Query(...),
-    code: str = Query(...),
-    resource_type: str = Query(...),
-    action: str = Query(...),
-    description: str | None = Query(default=None),
 ):
     """创建权限"""
     result = await create_permission(
-        db, name, code, resource_type, action, description, current_user_id
+        db,
+        create_data.name,
+        create_data.code,
+        create_data.resource_type,
+        create_data.action,
+        create_data.description,
+        current_user_id,
     )
     return result
 
@@ -125,15 +127,19 @@ async def delete_permission_api(
 
 @rbac_router.post("/roles", response_model=RoleResponse, tags=["RBAC"])
 async def create_role_api(
+    create_data: RoleCreate,
     db: DBSession,
     current_user_id: RequiredUser,
-    name: str = Query(...),
-    code: str = Query(...),
-    description: str | None = Query(default=None),
-    is_system: bool = Query(default=False),
 ):
     """创建角色"""
-    result = await create_role(db, name, code, description, is_system, current_user_id)
+    result = await create_role(
+        db,
+        create_data.name,
+        create_data.code,
+        create_data.description,
+        create_data.is_system,
+        current_user_id,
+    )
     return result
 
 
@@ -161,11 +167,23 @@ async def list_roles_api(
 @rbac_router.get("/roles/{role_id}", response_model=RoleResponse, tags=["RBAC"])
 async def get_role_api(role_id: str, db: DBSession):
     """获取角色详情"""
+    from sqlalchemy import func, select
+    from app.models.auth import user_roles
+    
     role = await get_role_by_id(db, role_id)
     if not role:
         from app.core.exceptions import ResourceNotFoundError
         raise ResourceNotFoundError(resource_type="角色", resource_id=role_id)
-    return RoleResponse.model_validate(role)
+    
+    role_response = RoleResponse.model_validate(role)
+    role_response.permission_count = len(role.permissions)
+    
+    user_count_result = await db.execute(
+        select(func.count(user_roles.user_id)).filter(user_roles.role_id == role_id)
+    )
+    role_response.user_count = user_count_result.scalar_one()
+    
+    return role_response
 
 
 @rbac_router.get("/roles/{role_id}/permissions", response_model=list[PermissionResponse], tags=["RBAC"])

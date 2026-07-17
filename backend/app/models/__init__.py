@@ -1,16 +1,18 @@
 """
 模型导出
 """
-from app.models.base import BaseModel, AuditMixin, SoftDeleteMixin, TenantMixin, TimestampMixin
+from app.models.base import AuditMixin, BaseModel, SoftDeleteMixin, TenantMixin, TimestampMixin
 from app.models.user import User
 from app.models.auth import Permission, Role, Session, role_permissions, user_roles
 from app.models.document import (
     Document,
     DocumentChunk,
+    DocumentProcessLog,
     DocumentVersion,
     IndexTask,
     KnowledgeBase,
 )
+from app.models.identity import KnowledgeBasePermission, DocumentPermission
 from app.models.qa import (
     CandidateQA,
     Conversation,
@@ -39,10 +41,13 @@ __all__ = [
     "role_permissions",
     # Document
     "KnowledgeBase",
+    "KnowledgeBasePermission",
     "Document",
+    "DocumentPermission",
     "DocumentVersion",
     "DocumentChunk",
     "IndexTask",
+    "DocumentProcessLog",
     # QA
     "StandardQA",
     "CandidateQA",

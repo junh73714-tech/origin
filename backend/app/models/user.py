@@ -1,6 +1,8 @@
 """
 用户模型
 """
+from datetime import datetime
+
 from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,6 +21,8 @@ class User(BaseModel):
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False, comment="用户状态: active/disabled/locked")
+    last_login_at: Mapped[datetime | None] = mapped_column(nullable=True, comment="最后登录时间")
 
     # 关系
     roles: Mapped[list["Role"]] = relationship(

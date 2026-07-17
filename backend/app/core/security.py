@@ -10,8 +10,13 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
-# 密码加密上下文 - 使用 argon2 替代 bcrypt
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+# 密码加密上下文 - 支持 bcrypt（旧密码）和 argon2（新密码）
+# 新密码使用 argon2 哈希，旧 bcrypt 密码可自动验证
+pwd_context = CryptContext(
+    schemes=["argon2", "bcrypt"],
+    default="argon2",
+    deprecated="auto",
+)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

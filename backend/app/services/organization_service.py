@@ -114,7 +114,21 @@ async def list_departments(
     result = await db.execute(query)
     departments = result.scalars().all()
 
-    items = [DepartmentResponse.model_validate(dept) for dept in departments]
+    items = []
+    for dept in departments:
+        dept_response = DepartmentResponse.model_validate(dept)
+        
+        if dept.parent_id:
+            parent = await get_department_by_id(db, dept.parent_id)
+            if parent:
+                dept_response.parent_name = parent.name
+        
+        member_count_result = await db.execute(
+            select(func.count(user_departments.c.user_id)).filter(user_departments.c.department_id == dept.id)
+        )
+        dept_response.member_count = member_count_result.scalar_one()
+        
+        items.append(dept_response)
 
     return PaginatedData.create(items, total, page, page_size)
 
@@ -290,7 +304,16 @@ async def list_user_groups(
     result = await db.execute(query)
     groups = result.scalars().all()
 
-    items = [UserGroupResponse.model_validate(group) for group in groups]
+    items = []
+    for group in groups:
+        group_response = UserGroupResponse.model_validate(group)
+        
+        member_count_result = await db.execute(
+            select(func.count(user_group_members.c.user_id)).filter(user_group_members.c.group_id == group.id)
+        )
+        group_response.member_count = member_count_result.scalar_one()
+        
+        items.append(group_response)
 
     return PaginatedData.create(items, total, page, page_size)
 

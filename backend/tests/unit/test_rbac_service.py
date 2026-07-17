@@ -57,6 +57,8 @@ class TestRBACService:
         assert result is not None
         assert result.code == "test_role"
         assert result.name == "测试角色"
+        assert result.user_count == 0
+        assert result.permission_count == 0
 
     @pytest.mark.asyncio
     async def test_get_permission_by_code(self):
