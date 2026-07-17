@@ -49,6 +49,7 @@ class QAMatchingService:
         knowledge_base_ids: list[str] | None = None,
         top_k: int = 5,
         threshold: float = 0.70,
+        trusted_threshold: float = 0.85,
     ) -> dict[str, Any]:
         """
         执行标准问答匹配
@@ -90,8 +91,21 @@ class QAMatchingService:
 
             final_score = self._compute_final_score(scores)
             if final_score >= threshold:
+                # 计算 trusted 标志
+                trusted = (
+                    qa.status == QAStatus.PUBLISHED
+                    and final_score >= trusted_threshold
+                    and scores.get("entity_consistency", 0.0) >= 1.0
+                    and scores.get("scope_consistency", 0.0) >= 1.0
+                )
+
+                # 获取来源文档ID列表和知识库ID
+                source_document_ids = list({source.document_id for source in (qa.sources or [])})
+                knowledge_base_id = qa.knowledge_base_id
+
                 results.append({
                     "matched": True,
+                    "trusted": trusted,
                     "qa_id": qa.id,
                     "question": qa.question,
                     "answer": qa.answer,
@@ -104,6 +118,8 @@ class QAMatchingService:
                     "scope_consistency": scores.get("scope_consistency", 0.0),
                     "final_score": round(final_score, 4),
                     "citations": self._build_citations(qa),
+                    "source_document_ids": source_document_ids,
+                    "knowledge_base_id": knowledge_base_id,
                     "status": qa.status,
                     "reason": "匹配成功",
                 })
@@ -370,7 +386,7 @@ class QAMatchingService:
         for source in (qa.sources or []):
             citations.append({
                 "document_id": source.document_id,
-                "document_version": source.document_version,
+                "document_version_id": source.document_version,  # 改为 document_version_id
                 "chunk_id": source.chunk_id,
                 "knowledge_base_id": source.knowledge_base_id,
                 "is_primary": source.is_primary,

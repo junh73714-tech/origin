@@ -348,11 +348,13 @@ class QAMatchRequest(BaseSchema):
     knowledge_base_ids: list[str] = Field(default_factory=list, description="知识库 ID 列表")
     top_k: int = Field(default=5, ge=1, le=20, description="返回候选数量")
     threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="综合评分阈值")
+    trusted_threshold: float = Field(default=0.85, ge=0.0, le=1.0, description="可信直出阈值")
 
 
 class QAMatchResult(BaseSchema):
     """标准问答匹配结果"""
     matched: bool = Field(default=False, description="是否匹配成功")
+    trusted: bool = Field(default=False, description="是否可信直出")
     qa_id: str = Field(default="", description="标准问答 ID")
     question: str = Field(default="", description="标准问题")
     answer: str = Field(default="", description="标准答案")
@@ -365,6 +367,8 @@ class QAMatchResult(BaseSchema):
     scope_consistency: float = Field(default=0.0, description="适用范围一致性评分")
     final_score: float = Field(default=0.0, description="综合评分")
     citations: list[dict] = Field(default_factory=list, description="引用来源")
+    source_document_ids: list[str] = Field(default_factory=list, description="来源文档ID列表")
+    knowledge_base_id: str = Field(default="", description="知识库ID")
     status: str = Field(default="", description="匹配状态")
     reason: str = Field(default="", description="匹配说明")
 

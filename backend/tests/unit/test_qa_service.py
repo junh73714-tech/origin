@@ -592,9 +592,11 @@ class TestSchemas:
             knowledge_base_ids=["kb1"],
             top_k=5,
             threshold=0.7,
+            trusted_threshold=0.85,
         )
         assert data.query == "如何申请请假？"
         assert data.access_context["roles"] == ["employee"]
+        assert data.trusted_threshold == 0.85
 
     def test_candidate_qa_generate_request(self):
         """测试候选问答生成请求 Schema"""

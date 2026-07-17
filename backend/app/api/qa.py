@@ -423,6 +423,7 @@ async def match_standard_qa(
         knowledge_base_ids=data.knowledge_base_ids,
         top_k=data.top_k,
         threshold=data.threshold,
+        trusted_threshold=data.trusted_threshold,
     )
 
     return success_response(data=result)
