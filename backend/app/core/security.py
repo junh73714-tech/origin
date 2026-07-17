@@ -5,23 +5,24 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
-
-# 密码加密上下文
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证密码"""
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(
+        plain_password.encode("utf-8"),
+        hashed_password.encode("utf-8")
+    )
 
 
 def get_password_hash(password: str) -> str:
     """哈希密码"""
-    return pwd_context.hash(password)
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
 
 def create_access_token(
@@ -110,7 +111,10 @@ class AccessContext:
         self.data_scopes = data_scopes or {}
 
     def has_permission(self, permission: str) -> bool:
-        """检查是否具有指定权限"""
+        """检查是否具有指定权限，支持通配符 *"""
+        # 通配符表示拥有所有权限
+        if "*" in self.permissions:
+            return True
         return permission in self.permissions
 
     def has_role(self, role: str) -> bool:
