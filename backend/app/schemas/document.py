@@ -174,6 +174,7 @@ class DocumentVersionResponse(BaseSchema):
     document_id: str = Field(..., description="文档ID")
     knowledge_base_id: str = Field(..., description="知识库ID")
     version: int = Field(..., description="版本号")
+    file_path: str = Field(..., description="MinIO存储路径")
     file_size: int = Field(..., description="文件大小(字节)")
     file_hash: str = Field(..., description="文件SHA-256哈希")
     previous_version: int | None = Field(default=None, description="上一版本号")
