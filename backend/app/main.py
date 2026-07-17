@@ -98,7 +98,7 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(documents_router, prefix="/api/v1/documents", tags=["文档"])
 
     # Chunk
-    app.include_router(chunks_router, prefix="/api/v1/chunks", tags=["文档片段"])
+    app.include_router(chunks_router, prefix="/api/v1/document-chunks", tags=["文档片段"])
 
     # 索引任务
     app.include_router(index_tasks_router, prefix="/api/v1/index-tasks", tags=["索引任务"])

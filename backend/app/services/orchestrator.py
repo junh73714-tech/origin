@@ -446,6 +446,12 @@ class DocumentOrchestrator:
                 content_hash=self._hash_text(cd.clean_text),
                 token_count=cd.token_count,
                 chunk_metadata=cd.metadata,
+                permission_metadata={
+                    "knowledge_base_id": doc.knowledge_base_id,
+                    "document_id": doc.id,
+                    "scope_hash": self._make_scope_hash(doc),
+                    "created_by": doc.created_by,
+                },
                 status="active",
                 index_status="pending",
                 created_by=doc.created_by,
@@ -584,3 +590,14 @@ class DocumentOrchestrator:
         """计算文本的简单哈希"""
         import hashlib
         return hashlib.sha256(text.encode()).hexdigest()
+
+    @staticmethod
+    def _make_scope_hash(doc: Document) -> str:
+        """
+        生成权限范围哈希（简化版，正式对接成员4后替换为 AccessContext.scope_hash）
+
+        TODO(m5): 替换为 PermissionService.get_access_context().scope_hash
+        """
+        import hashlib
+        raw = f"{doc.tenant_id}:{doc.knowledge_base_id}:{doc.id}:{doc.created_by}"
+        return hashlib.sha256(raw.encode()).hexdigest()[:16]
