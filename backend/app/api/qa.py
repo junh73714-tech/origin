@@ -1,5 +1,4 @@
 """
-<<<<<<< HEAD
 标准问答路由（成员7）
 提供标准问答的完整生命周期管理、审核发布、候选问答、匹配等接口
 """
@@ -508,22 +507,3 @@ async def get_allowed_transitions(
             "allowed_transitions": allowed,
         }
     )
-=======
-问答路由占位
-由成员6实现
-"""
-from fastapi import APIRouter
-
-router = APIRouter()
-
-# TODO: 由成员6实现
-# - POST /chat - 问答对话
-# - GET /standard - 标准问答列表
-# - POST /standard - 创建标准问答
-# - GET /standard/{qa_id} - 获取标准问答详情
-# - PUT /standard/{qa_id} - 更新标准问答
-# - POST /standard/{qa_id}/publish - 发布标准问答
-# - POST /standard/{qa_id}/unpublish - 下线标准问答
-# - GET /conversations - 会话列表
-# - GET /conversations/{conv_id} - 获取会话详情
->>>>>>> 8de89ee904f686dbe7d52e3b35cdc79ef917eeb2

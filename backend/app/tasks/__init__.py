@@ -1,5 +1,4 @@
 """
-<<<<<<< HEAD
 Tasks 模块初始化（成员7）
 """
 from app.tasks.qa_tasks import (
@@ -19,7 +18,3 @@ __all__ = [
     "get_celery_app",
     "register_celery_tasks",
 ]
-=======
-Tasks 模块初始化
-"""
->>>>>>> 8de89ee904f686dbe7d52e3b35cdc79ef917eeb2

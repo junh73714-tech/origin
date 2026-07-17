@@ -19,7 +19,6 @@ from app.models.qa import (
     QaReference,
     StandardQA,
     UserFeedback,
-<<<<<<< HEAD
     QuestionVariant,
     QASource,
     QAReviewRecord,
@@ -34,8 +33,6 @@ from app.models.evaluation import (
     EvalCase,
     EvalRun,
     EvalResult,
-=======
->>>>>>> 8de89ee904f686dbe7d52e3b35cdc79ef917eeb2
 )
 from app.models.audit import AuditLog, OutboxEvent, SecurityEvent
 
@@ -65,7 +62,6 @@ __all__ = [
     "CandidateQA",
     "QaReference",
     "QaAuditRecord",
-<<<<<<< HEAD
     "QuestionVariant",
     "QASource",
     "QAReviewRecord",
@@ -82,11 +78,6 @@ __all__ = [
     "EvalCase",
     "EvalRun",
     "EvalResult",
-=======
-    "Conversation",
-    "Message",
-    "UserFeedback",
->>>>>>> 8de89ee904f686dbe7d52e3b35cdc79ef917eeb2
     # Audit
     "AuditLog",
     "SecurityEvent",
