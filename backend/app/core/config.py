@@ -27,7 +27,7 @@ class DatabaseSettings(BaseSettings):
     def sync_url(self) -> str:
         return f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
 
-    model_config = SettingsConfigDict(env_prefix="DATABASE_")
+    model_config = SettingsConfigDict(env_prefix="DATABASE_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 class RedisSettings(BaseSettings):
@@ -43,7 +43,7 @@ class RedisSettings(BaseSettings):
             return f"redis://:{self.password}@{self.host}:{self.port}/{self.db}"
         return f"redis://{self.host}:{self.port}/{self.db}"
 
-    model_config = SettingsConfigDict(env_prefix="REDIS_")
+    model_config = SettingsConfigDict(env_prefix="REDIS_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 class MinIOSettings(BaseSettings):
@@ -55,7 +55,7 @@ class MinIOSettings(BaseSettings):
     bucket_documents: str = "documents"
     bucket_temp: str = "temp"
 
-    model_config = SettingsConfigDict(env_prefix="MINIO_")
+    model_config = SettingsConfigDict(env_prefix="MINIO_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 class OpenSearchSettings(BaseSettings):
@@ -70,7 +70,7 @@ class OpenSearchSettings(BaseSettings):
     def url(self) -> str:
         return f"{self.scheme}://{self.user}:{self.password}@{self.host}:{self.port}"
 
-    model_config = SettingsConfigDict(env_prefix="OPENSEARCH_")
+    model_config = SettingsConfigDict(env_prefix="OPENSEARCH_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 class LLMSettings(BaseSettings):
