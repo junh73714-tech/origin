@@ -347,6 +347,55 @@ class IndexingService:
     # 一致性检查
     # -------------------------------------------------------------------------
 
+    # -------------------------------------------------------------------------
+    # 索引状态查询
+    # -------------------------------------------------------------------------
+
+    async def get_index_status(self, document_version_id: str) -> dict[str, Any]:
+        """
+        查询指定版本的索引状态
+
+        供成员6在发布前检查双索引是否可用。
+        只有 OpenSearch 和 pgvector 都达到可用状态，文档才具备发布条件。
+
+        Returns:
+            dict: {"opensearch": "completed/failed/pending", "pgvector": "completed/failed/pending",
+                   "opensearch_count": int, "pgvector_count": int}
+        """
+        result = await self.db.execute(
+            select(IndexTask).where(
+                IndexTask.document_version_id == document_version_id,
+            )
+        )
+        tasks = result.scalars().all()
+
+        os_status = "pending"
+        pg_status = "pending"
+        os_count = 0
+        pg_count = 0
+
+        for task in tasks:
+            if task.target == "opensearch" or task.target == "both":
+                os_count += 1
+                if task.status == "completed":
+                    os_status = "completed"
+                elif task.status == "failed" and os_status != "completed":
+                    os_status = "failed"
+            if task.target == "pgvector" or task.target == "both":
+                pg_count += 1
+                if task.status == "completed":
+                    pg_status = "completed"
+                elif task.status == "failed" and pg_status != "completed":
+                    pg_status = "failed"
+
+        return {
+            "document_version_id": document_version_id,
+            "opensearch": os_status,
+            "pgvector": pg_status,
+            "opensearch_count": os_count,
+            "pgvector_count": pg_count,
+        }
+
     async def consistency_check(
         self,
         knowledge_base_id: str | None = None,
