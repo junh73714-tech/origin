@@ -52,13 +52,22 @@ class InMemoryVectorStore:
     def _match(row: dict[str, Any], where: dict[str, Any]) -> bool:
         if row.get("tenant_id") != where.get("tenant_id"):
             return False
-        if where.get("require_published") and row.get("status") != "published":
+        # 优先 document_status（成员5索引字段），兼容旧测试数据的 status=published
+        doc_status = row.get("document_status") or row.get("status")
+        chunk_status = row.get("chunk_status") or (
+            row.get("status") if row.get("document_status") else None
+        )
+        if chunk_status and chunk_status not in {"active", "published"}:
+            # published 仅作兼容旧内存数据；正式索引 Chunk.status 应为 active
+            if chunk_status != "published":
+                return False
+        if where.get("require_published") and doc_status != "published":
             return False
         if where.get("require_current_version") and not row.get("is_current_version", True):
             return False
-        if where.get("exclude_paused") and row.get("status") == "paused":
+        if where.get("exclude_paused") and doc_status == "paused":
             return False
-        if where.get("exclude_offlined") and row.get("status") == "offlined":
+        if where.get("exclude_offlined") and doc_status in {"offlined", "offline"}:
             return False
         deny = set(where.get("deny_document_ids") or [])
         if row.get("document_id") in deny:
@@ -157,7 +166,7 @@ class VectorRetriever:
                     metadata=row.get("metadata") or {},
                     vector_rank=idx,
                     is_current_version=bool(row.get("is_current_version", True)),
-                    status=row.get("status") or "published",
+                    status=row.get("document_status") or row.get("status") or "published",
                     confidentiality_level=int(row.get("confidentiality_level") or 0),
                 )
             )

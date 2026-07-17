@@ -186,7 +186,7 @@ class KeywordRetriever:
                 metadata=src.get("metadata") or {},
                 keyword_rank=idx,
                 is_current_version=bool(src.get("is_current_version", True)),
-                status=src.get("status") or "published",
+                status=src.get("document_status") or src.get("status") or "published",
                 confidentiality_level=int(src.get("confidentiality_level") or 0),
             )
             hits.append(hit)

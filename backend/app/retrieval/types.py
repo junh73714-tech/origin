@@ -69,17 +69,38 @@ class RetrievalFilter(BaseModel):
         return ids
 
     def to_opensearch_filter(self) -> list[dict[str, Any]]:
-        """转换为 OpenSearch bool filter 子句。"""
+        """
+        转换为 OpenSearch bool filter 子句。
+
+        成员5 索引约定（c86245c）：
+        - status：Chunk 级 active/outdated/deleted
+        - document_status：版本发布态 published/...
+        - is_current_version / effective_time / expiration_time：版本过滤字段
+        正式召回必须用 document_status，不得误用 Chunk.status。
+        """
         temp_doc_ids = self.temporary_grant_document_ids
         filters: list[dict[str, Any]] = [{"term": {"tenant_id": self.tenant_id}}]
+        # Chunk 自身须有效
+        filters.append({"term": {"status": "active"}})
         if self.require_published:
-            filters.append({"term": {"status": "published"}})
+            filters.append({"term": {"document_status": "published"}})
         if self.require_current_version:
             filters.append({"term": {"is_current_version": True}})
         if self.exclude_paused:
-            filters.append({"bool": {"must_not": [{"term": {"status": "paused"}}]}})
+            filters.append(
+                {"bool": {"must_not": [{"term": {"document_status": "paused"}}]}}
+            )
         if self.exclude_offlined:
-            filters.append({"bool": {"must_not": [{"term": {"status": "offlined"}}]}})
+            filters.append(
+                {
+                    "bool": {
+                        "must_not": [
+                            {"term": {"document_status": "offlined"}},
+                            {"term": {"document_status": "offline"}},
+                        ]
+                    }
+                }
+            )
         if self.exclude_expired:
             filters.append(
                 {

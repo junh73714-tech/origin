@@ -16,7 +16,8 @@ DOCS = [
         "tenant_id": "t1",
         "clean_text": "华东区域差旅报销制度条款",
         "title_path": "差旅/报销",
-        "status": "published",
+        "status": "active",
+        "document_status": "published",
         "is_current_version": True,
         "confidentiality_level": 1,
         "embedding": None,
@@ -30,7 +31,8 @@ DOCS = [
         "tenant_id": "t1",
         "clean_text": "B 部门内部薪资制度",
         "title_path": "薪资",
-        "status": "published",
+        "status": "active",
+        "document_status": "published",
         "is_current_version": True,
         "confidentiality_level": 1,
         "embedding": None,
@@ -44,7 +46,8 @@ DOCS = [
         "tenant_id": "t1",
         "clean_text": "显式拒绝文档内容差旅",
         "title_path": "拒绝",
-        "status": "published",
+        "status": "active",
+        "document_status": "published",
         "is_current_version": True,
         "confidentiality_level": 1,
         "embedding": None,
@@ -58,7 +61,8 @@ DOCS = [
         "tenant_id": "t1",
         "clean_text": "旧版本差旅制度",
         "title_path": "差旅",
-        "status": "published",
+        "status": "active",
+        "document_status": "published",
         "is_current_version": False,
         "confidentiality_level": 1,
         "embedding": None,
@@ -72,7 +76,8 @@ DOCS = [
         "tenant_id": "t1",
         "clean_text": "已下线差旅制度",
         "title_path": "差旅",
-        "status": "offlined",
+        "status": "active",
+        "document_status": "offline",
         "is_current_version": True,
         "confidentiality_level": 1,
         "embedding": None,
@@ -116,7 +121,7 @@ def test_permission_filter_before_recall():
     assert "doc_denied" not in ids
     assert "doc_b" not in ids  # 不在 kb_public
     assert all(h.is_current_version for h in result.fused_hits)
-    assert all(h.status != "offlined" for h in result.fused_hits)
+    assert all(h.status != "offlined" and h.status != "offline" for h in result.fused_hits)
 
 
 def test_keyword_only():

@@ -140,6 +140,17 @@ def test_opensearch_filter_default_deny_empty_scope():
     )
 
 
+def test_opensearch_filter_uses_document_status_not_chunk_status():
+    """成员5 索引：Chunk.status=active，文档态在 document_status。"""
+    f = RetrievalFilter(tenant_id="t1", user_id="u1", knowledge_base_ids=["kb1"])
+    clauses = f.to_opensearch_filter()
+    assert {"term": {"status": "active"}} in clauses
+    assert {"term": {"document_status": "published"}} in clauses
+    assert {"term": {"is_current_version": True}} in clauses
+    # 不得再误用 Chunk.status=published
+    assert {"term": {"status": "published"}} not in clauses
+
+
 def test_retrieval_filter_temp_grants_as_objects():
     grant = TemporaryGrantRef(
         resource_type="document",

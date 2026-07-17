@@ -13,7 +13,7 @@ def dedupe_hits(hits: list[RetrievalHit]) -> list[RetrievalHit]:
     for hit in hits:
         if not hit.is_current_version:
             continue
-        if hit.status in {"paused", "offlined", "expired", "draft"}:
+        if hit.status in {"paused", "offlined", "offline", "expired", "draft"}:
             continue
         key = f"{hit.chunk_id}:{hit.document_version_id}"
         existing = best.get(key)

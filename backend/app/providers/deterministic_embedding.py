@@ -3,12 +3,15 @@
 
 正式生产向量必须使用成员5的 app.providers.embedding.EmbeddingProvider。
 本模块仅供成员6单元/集成测试，禁止与生产向量空间混用。
+
+联调开关：环境变量 USE_MEMBER5_EMBEDDING=1 时返回成员5正式实现。
 """
 from __future__ import annotations
 
 import hashlib
 import math
-from typing import Protocol
+import os
+from typing import Any, Protocol
 
 from app.core.config import settings
 
@@ -55,9 +58,34 @@ class DeterministicEmbeddingProvider:
         return [v / norm for v in values]
 
 
+class Member5EmbeddingAdapter:
+    """
+    包装成员5 EmbeddingProvider，统一暴露 model_name 属性供检索日志使用。
+    embed_query / embed_documents 为同步调用（与成员5实现一致）。
+    """
+
+    def __init__(self, provider: Any = None):
+        from app.providers.embedding import EmbeddingProvider
+
+        self._inner = provider or EmbeddingProvider()
+        self.model_name = getattr(self._inner, "model", None) or settings.embedding.model
+        self.model_version = getattr(self._inner, "model_version", "") or ""
+        self.dimension = int(getattr(self._inner, "dimension", settings.embedding.dimension))
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._inner.embed_query(text)
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self._inner.embed_documents(texts)
+
+
 def get_embedding_provider() -> EmbeddingProviderProtocol:
     """
     获取 EmbeddingProvider。
-    联调阶段可改为返回成员5正式 EmbeddingProvider；当前默认测试替身。
+    - USE_MEMBER5_EMBEDDING=1：成员5正式实现（联调/生产）
+    - 默认：确定性测试替身（单元测试）
     """
+    flag = os.getenv("USE_MEMBER5_EMBEDDING", "").strip().lower()
+    if flag in {"1", "true", "yes", "on"}:
+        return Member5EmbeddingAdapter()
     return DeterministicEmbeddingProvider()

@@ -9,9 +9,10 @@
 
 ## 关键类型
 
-- `RetrievalFilter`：与 AccessContext / 成员4 对齐的统一过滤语义（含 `user_id`）
-- `TemporaryGrantRef`：临时授权对象，对齐成员4 `TemporaryGrantInfo`；过滤时用属性 `temporary_grant_document_ids` 提取文档 ID
+- `RetrievalFilter`：与 AccessContext / 成员4 对齐；OpenSearch 过滤使用成员5 的 `document_status` + `is_current_version`
+- `TemporaryGrantRef`：临时授权对象，对齐成员4 `TemporaryGrantInfo`
 - `RetrievalHit`：双路统一候选结构
+- `index_status.is_dual_index_ready`：消费成员5 `get_index_status` 判断双索引就绪
 
 ## 权限
 

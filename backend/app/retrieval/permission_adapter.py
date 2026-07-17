@@ -181,10 +181,18 @@ class DefaultPermissionAdapter:
         max_level = int(getattr(access, "max_confidentiality_level", 0) or 0)
         if level > max_level:
             return False
-        status = chunk.get("status") or "published"
-        if status in {"paused", "offlined", "expired", "draft", "pending"}:
+        status = (
+            chunk.get("document_status")
+            or chunk.get("status")
+            or "published"
+        )
+        if status in {"paused", "offlined", "offline", "expired", "draft", "pending"}:
             return False
         if chunk.get("is_current_version") is False:
+            return False
+        # Chunk 级失效
+        chunk_status = chunk.get("chunk_status")
+        if chunk_status in {"outdated", "deleted"}:
             return False
 
         allow = {x for x in ((access.data_scopes or {}).get("document", []) or []) if x != "*"}
