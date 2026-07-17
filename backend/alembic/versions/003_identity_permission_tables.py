@@ -9,6 +9,9 @@ branch_labels = None
 depends_on = None
 
 
+import alembic.op as op
+
+
 def upgrade() -> None:
     from sqlalchemy import Column, String, Boolean, Integer, Text, DateTime, ForeignKey, JSON
     from sqlalchemy.sql import func
