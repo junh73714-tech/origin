@@ -10,6 +10,23 @@ from app.schemas.common import BaseSchema
 
 # ============ 请求 Schema ============
 
+class PermissionCreate(BaseSchema):
+    """创建权限请求"""
+    name: str = Field(..., description="权限名称")
+    code: str = Field(..., description="权限编码")
+    resource_type: str = Field(..., description="资源类型")
+    action: str = Field(..., description="操作类型")
+    description: str | None = Field(default=None, description="权限描述")
+
+
+class RoleCreate(BaseSchema):
+    """创建角色请求"""
+    name: str = Field(..., description="角色名称")
+    code: str = Field(..., description="角色编码")
+    description: str | None = Field(default=None, description="角色描述")
+    is_system: bool = Field(default=False, description="是否系统角色")
+
+
 class LoginRequest(BaseSchema):
     """登录请求"""
     username: str = Field(..., min_length=3, max_length=100, description="用户名或邮箱")
@@ -61,6 +78,10 @@ class UserResponse(BaseSchema):
     phone: str | None = None
     is_active: bool
     is_superuser: bool
+    status: str = "active"
+    last_login_at: datetime | None = None
+    department_id: str | None = None
+    department_name: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -79,6 +100,10 @@ class RoleResponse(BaseSchema):
     code: str
     description: str | None = None
     is_system: bool
+    user_count: int = 0
+    permission_count: int = 0
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class PermissionResponse(BaseSchema):

@@ -3,25 +3,27 @@
 包括角色、权限、会话等
 """
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, String, Table, Text
+from sqlalchemy import Column, DateTime, ForeignKey, String, Table, Text
+from sqlalchemy.dialects.mysql import JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
 
-# 关联表
+# 关联表（使用 Column 而非 mapped_column，Table 不接受 MappedColumn）
 user_roles = Table(
     "user_roles",
     BaseModel.metadata,
-    mapped_column("user_id", String(64), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
-    mapped_column("role_id", String(64), ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", String(64), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    Column("role_id", String(64), ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True),
 )
 
 role_permissions = Table(
     "role_permissions",
     BaseModel.metadata,
-    mapped_column("role_id", String(64), ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True),
-    mapped_column("permission_id", String(64), ForeignKey("permissions.id", ondelete="CASCADE"), primary_key=True),
+    Column("role_id", String(64), ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True),
+    Column("permission_id", String(64), ForeignKey("permissions.id", ondelete="CASCADE"), primary_key=True),
 )
 
 
@@ -35,6 +37,7 @@ class Permission(BaseModel):
     resource_type: Mapped[str] = mapped_column(String(50), nullable=False)  # document, knowledge_base, qa, etc.
     action: Mapped[str] = mapped_column(String(50), nullable=False)  # create, read, update, delete
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    permission_metadata: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True, comment="权限元数据，包含 scope_hash 快照等")
 
     # 关系
     roles: Mapped[list["Role"]] = relationship(

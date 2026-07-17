@@ -70,6 +70,33 @@ class ListResponse(BaseSchema, Generic[T]):
     total_pages: int
 
 
+class PaginatedData(BaseSchema, Generic[T]):
+    """分页数据"""
+
+    items: list[T]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+    @classmethod
+    def create(
+        cls,
+        items: list[T],
+        total: int,
+        page: int,
+        page_size: int,
+    ) -> "PaginatedData[T]":
+        total_pages = (total + page_size - 1) // page_size if page_size > 0 else 0
+        return cls(
+            items=items,
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        )
+
+
 class BulkOperationResult(BaseSchema):
     """批量操作结果"""
     total: int

@@ -143,6 +143,33 @@ class SecuritySettings(BaseSettings):
 
 class AppSettings(BaseSettings):
     """应用主配置"""
+    # 兼容测试用例的 app 属性访问方式
+    class AppConfig(BaseSettings):
+        """应用子配置（兼容属性访问）"""
+        name: str = "rag-knowledge"
+        host: str = "0.0.0.0"
+        port: int = 8000
+        debug: bool = False
+        environment: Literal["development", "staging", "production"] = "development"
+        log_level: str = "INFO"
+        cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+
+        @field_validator("log_level", mode="before")
+        @classmethod
+        def validate_log_level(cls, v: str) -> str:
+            if v is None:
+                return "INFO"
+            valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+            if v.upper() not in valid_levels:
+                raise ValueError(f"log_level must be one of {valid_levels}")
+            return v.upper()
+
+        model_config = SettingsConfigDict(env_prefix="APP_")
+
+    # 主配置属性（兼容属性访问）
+    app: AppConfig = AppConfig()
+
+    # 独立配置属性（兼容环境变量直接注入）
     name: str = "rag-knowledge"
     host: str = "0.0.0.0"
     port: int = 8000
@@ -152,19 +179,37 @@ class AppSettings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
     # 子配置
-    database = DatabaseSettings()
-    redis = RedisSettings()
-    minio = MinIOSettings()
-    opensearch = OpenSearchSettings()
-    llm = LLMSettings()
-    embedding = EmbeddingSettings()
-    reranker = RerankerSettings()
-    celery = CelerySettings()
-    security = SecuritySettings()
+    database: DatabaseSettings = DatabaseSettings()
+    redis: RedisSettings = RedisSettings()
+    minio: MinIOSettings = MinIOSettings()
+    opensearch: OpenSearchSettings = OpenSearchSettings()
+    llm: LLMSettings = LLMSettings()
+    embedding: EmbeddingSettings = EmbeddingSettings()
+    reranker: RerankerSettings = RerankerSettings()
+    celery: CelerySettings = CelerySettings()
+    security: SecuritySettings = SecuritySettings()
 
-    @field_validator("log_level")
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # 将主配置属性同步到 app 子配置
+        if self.app.name == "rag-knowledge":
+            self.app.name = self.name
+        if self.app.debug is False:
+            self.app.debug = self.debug
+        if self.app.environment == "development":
+            self.app.environment = self.environment
+        if self.app.log_level == "INFO":
+            self.app.log_level = self.log_level
+        if self.app.host == "0.0.0.0":
+            self.app.host = self.host
+        if self.app.port == 8000:
+            self.app.port = self.port
+
+    @field_validator("log_level", mode="before")
     @classmethod
     def validate_log_level(cls, v: str) -> str:
+        if v is None:
+            return "INFO"
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v.upper() not in valid_levels:
             raise ValueError(f"log_level must be one of {valid_levels}")
@@ -174,6 +219,7 @@ class AppSettings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",  # 忽略额外的环境变量
     )
 
 
