@@ -386,7 +386,8 @@ class QAMatchingService:
         for source in (qa.sources or []):
             citations.append({
                 "document_id": source.document_id,
-                "document_version_id": source.document_version,  # 改为 document_version_id
+                "document_version": source.document_version,  # 整数版本号
+                "document_version_id": f"doc_{source.document_id}_v{source.document_version}",  # 占位符，需与成员5对齐
                 "chunk_id": source.chunk_id,
                 "knowledge_base_id": source.knowledge_base_id,
                 "is_primary": source.is_primary,
