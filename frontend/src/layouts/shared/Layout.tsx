@@ -2,7 +2,7 @@
  * 共享布局组件
  */
 import { useState } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Button, theme } from 'antd';
+import { Layout as AntLayout, Menu, Avatar, Dropdown, Button, theme } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -20,7 +20,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import styles from './Layout.module.css';
 
-const { Header, Sider, Content } = Layout;
+const { Header, Sider, Content } = AntLayout;
 
 export function Layout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -87,7 +87,7 @@ export function Layout() {
   ];
 
   return (
-    <Layout className={styles.layout}>
+    <AntLayout className={styles.layout}>
       <Sider
         trigger={null}
         collapsible
@@ -107,7 +107,7 @@ export function Layout() {
         />
       </Sider>
 
-      <Layout>
+      <AntLayout>
         <Header className={styles.header}>
           <Button
             type="text"
@@ -137,7 +137,7 @@ export function Layout() {
         <Content className={styles.content}>
           <Outlet />
         </Content>
-      </Layout>
-    </Layout>
+      </AntLayout>
+    </AntLayout>
   );
 }
