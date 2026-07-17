@@ -70,11 +70,15 @@ async def get_required_user_id(
 async def get_access_context(
     request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AccessContext:
     """
     获取访问上下文
-    包含用户信息、角色、权限和数据范围
+    包含用户信息、角色、权限和数据范围。
+    启用 USE_MEMBER4_PERMISSION 时，用 PermissionService 补齐数据权限字段。
     """
+    from app.retrieval.member4_bridge import safe_enrich_access
+
     # 如果没有认证，返回空上下文
     if credentials is None:
         return AccessContext(
@@ -95,21 +99,25 @@ async def get_access_context(
         )
 
     # 从令牌中提取访问上下文
-    return AccessContext(
+    access = AccessContext(
         user_id=payload.get("sub", ""),
         tenant_id=payload.get("tenant_id", ""),
         roles=payload.get("roles", []),
         permissions=payload.get("permissions", []),
         data_scopes=payload.get("data_scopes", {}),
     )
+    return await safe_enrich_access(db, access)
 
 
 async def get_required_access_context(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AccessContext:
     """
     获取访问上下文（必须认证）
     """
+    from app.retrieval.member4_bridge import safe_enrich_access
+
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -125,13 +133,14 @@ async def get_required_access_context(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return AccessContext(
+    access = AccessContext(
         user_id=payload.get("sub", ""),
         tenant_id=payload.get("tenant_id", ""),
         roles=payload.get("roles", []),
         permissions=payload.get("permissions", []),
         data_scopes=payload.get("data_scopes", {}),
     )
+    return await safe_enrich_access(db, access)
 
 
 def require_permission(permission: str):

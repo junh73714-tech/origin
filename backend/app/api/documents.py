@@ -24,6 +24,7 @@ from app.schemas.document import (
 from app.services.document import DocumentService
 
 router = APIRouter()
+documents_router = router
 
 
 def get_doc_service(db: DBSession) -> DocumentService:

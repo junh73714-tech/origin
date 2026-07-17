@@ -1,24 +1,36 @@
 """
-成员4 权限过滤联调桥接。
+成员4 PermissionService 正式接入桥接。
 
-在 PermissionService 尚未合入 develop 前，用与成员4（daafd86）一致的规则
-构建 OpenSearch/pgvector 过滤语义，供成员6 检索联调。
+推荐路径：
+  ctx = await PermissionService(db).get_access_context(user_id=...)
+  filters = PermissionService(db)._build_retrieval_filter_from_context(ctx)
+  m6_filters = member4_filter_dict_to_m6(filters.model_dump())
 
-正式路径（PermissionService 合入后）：
-  filters = await permission_service.build_retrieval_filters(user_id)
-  或 sync: permission_service.build_retrieval_filters_sync(access)  # 注意 sync 版字段不完整，优先用 async+AccessContextResponse
+AccessContext 富化后，DefaultPermissionAdapter.build_retrieval_filters 亦可直接使用。
 """
 from __future__ import annotations
 
+import os
 from typing import Any
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.logging import get_logger
 from app.core.security import AccessContext
 from app.retrieval.permission_adapter import DefaultPermissionAdapter
 from app.retrieval.types import RetrievalFilter, TemporaryGrantRef
 
+logger = get_logger(__name__)
+
+
+def use_member4_permission() -> bool:
+    """是否启用正式 PermissionService 富化（默认开启，失败时回退 JWT 上下文）。"""
+    flag = os.getenv("USE_MEMBER4_PERMISSION", "1").strip().lower()
+    return flag in {"1", "true", "yes", "on"}
+
 
 def access_context_to_retrieval_filter(access: AccessContext) -> RetrievalFilter:
-    """成员6 侧统一入口：从 AccessContext 构建 RetrievalFilter（契约对齐成员4）。"""
+    """成员6 侧统一入口：从 AccessContext 构建 RetrievalFilter。"""
     return DefaultPermissionAdapter().build_retrieval_filters(access)
 
 
@@ -36,7 +48,6 @@ def build_member4_style_opensearch_bool(filters: RetrievalFilter) -> dict[str, A
         for g in filters.effective_temporary_grants
         if g.resource_type == "document" and g.resource_id
     ]
-    # 亦兼容属性提取
     if not temp_doc_ids:
         temp_doc_ids = list(filters.temporary_grant_document_ids)
 
@@ -112,3 +123,88 @@ def member4_filter_dict_to_m6(data: dict[str, Any]) -> RetrievalFilter:
         exclude_expired=bool(data.get("exclude_expired", True)),
         scope_hash=str(data.get("scope_hash") or ""),
     )
+
+
+def apply_access_context_response(access: AccessContext, ctx: Any) -> AccessContext:
+    """把成员4 AccessContextResponse 写回成员6 AccessContext。"""
+    access.tenant_id = getattr(ctx, "tenant_id", None) or access.tenant_id
+    access.user_id = getattr(ctx, "user_id", None) or access.user_id
+    access.role_ids = list(getattr(ctx, "role_ids", None) or [])
+    access.department_ids = list(getattr(ctx, "department_ids", None) or [])
+    access.group_ids = list(getattr(ctx, "group_ids", None) or [])
+    access.knowledge_base_ids = list(getattr(ctx, "knowledge_base_ids", None) or [])
+    access.project_ids = list(getattr(ctx, "project_ids", None) or [])
+    access.regions = list(getattr(ctx, "regions", None) or [])
+    access.max_confidentiality_level = int(
+        getattr(ctx, "max_confidentiality_level", 0) or 0
+    )
+    access.deny_document_ids = list(getattr(ctx, "deny_document_ids", None) or [])
+    grants = []
+    for g in getattr(ctx, "temporary_grants", None) or []:
+        if hasattr(g, "model_dump"):
+            grants.append(g.model_dump())
+        elif isinstance(g, dict):
+            grants.append(g)
+    access.temporary_grants = grants
+    access.scope_hash = str(getattr(ctx, "scope_hash", "") or "")
+    access.data_scopes = {
+        **(access.data_scopes or {}),
+        "knowledge_base": list(access.knowledge_base_ids),
+        "document": list(getattr(ctx, "allow_document_ids", None) or []),
+        "deny_document_ids": list(access.deny_document_ids),
+        "max_confidentiality_level": access.max_confidentiality_level,
+        "temporary_grants": list(access.temporary_grants),
+        "scope_hash": access.scope_hash,
+    }
+    return access
+
+
+async def enrich_access_with_permission_service(
+    db: AsyncSession,
+    access: AccessContext,
+) -> AccessContext:
+    """
+    使用正式 PermissionService.get_access_context 富化 AccessContext。
+    表缺失或用户不存在时抛出异常，由调用方决定是否回退。
+    """
+    from app.services.permission_service import PermissionService
+
+    svc = PermissionService(db)
+    ctx = await svc.get_access_context(
+        tenant_id=access.tenant_id or None,
+        user_id=access.user_id,
+    )
+    return apply_access_context_response(access, ctx)
+
+
+async def build_m6_filters_from_permission_service(
+    db: AsyncSession,
+    user_id: str,
+) -> RetrievalFilter:
+    """正式路径：PermissionService → 成员6 RetrievalFilter。"""
+    from app.services.permission_service import PermissionService
+
+    svc = PermissionService(db)
+    m4_filters = await svc.build_retrieval_filters(user_id)
+    data = m4_filters.model_dump() if hasattr(m4_filters, "model_dump") else dict(m4_filters)
+    return member4_filter_dict_to_m6(data)
+
+
+async def safe_enrich_access(
+    db: AsyncSession | None,
+    access: AccessContext,
+) -> AccessContext:
+    """富化失败时保留 JWT/调用方上下文，不阻断主链路。"""
+    if db is None or not use_member4_permission() or not access.user_id:
+        return access
+    if access.user_id == "anonymous":
+        return access
+    try:
+        return await enrich_access_with_permission_service(db, access)
+    except Exception as exc:  # noqa: BLE001 - 联调期显式降级
+        logger.warning(
+            "permission_service_enrich_failed",
+            user_id=access.user_id,
+            error=str(exc),
+        )
+        return access

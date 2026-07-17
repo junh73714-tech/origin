@@ -31,6 +31,22 @@ class AuthenticationError(RAGKnowledgeException):
         super().__init__("AUTH_ERROR", message, details)
 
 
+class LoginLockedError(AuthenticationError):
+    """登录锁定异常"""
+
+    def __init__(
+        self,
+        message: str = "账户已被锁定，请稍后再试",
+        retry_after: int | None = None,
+        details: dict[str, Any] | None = None,
+    ):
+        details = details or {}
+        if retry_after:
+            details["retry_after"] = retry_after
+        super().__init__(message=message, details=details)
+        self.code = "AUTH_LOGIN_LOCKED"
+
+
 class AuthorizationError(RAGKnowledgeException):
     """授权异常"""
 

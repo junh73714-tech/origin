@@ -64,17 +64,18 @@ class DebugQueryRequest(BaseModel):
 
 
 def _enrich_access(access: AccessContext) -> AccessContext:
+    """兼容旧调用：RequiredAccess 已在依赖里完成 PermissionService 富化。"""
     if not getattr(access, "scope_hash", None):
         access.scope_hash = compute_scope_hash(access)
-    if not hasattr(access, "deny_document_ids"):
+    if not hasattr(access, "deny_document_ids") or access.deny_document_ids is None:
         access.deny_document_ids = []
-    if not hasattr(access, "knowledge_base_ids"):
+    if not hasattr(access, "knowledge_base_ids") or access.knowledge_base_ids is None:
         access.knowledge_base_ids = list(
             (access.data_scopes or {}).get("knowledge_base", []) or []
         )
     if not hasattr(access, "max_confidentiality_level"):
         access.max_confidentiality_level = 0
-    if not hasattr(access, "temporary_grants"):
+    if not hasattr(access, "temporary_grants") or access.temporary_grants is None:
         access.temporary_grants = []
     return access
 

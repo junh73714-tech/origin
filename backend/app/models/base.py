@@ -70,7 +70,7 @@ class AuditMixin:
     )
 
 
-class BaseModel(Base, TimestampMixin, TenantMixin, AuditMixin):
+class BaseModel(Base, TimestampMixin, TenantMixin, SoftDeleteMixin, AuditMixin):
     """基础模型 -- 所有业务模型的基类"""
 
     __abstract__ = True
