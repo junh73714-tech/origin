@@ -67,8 +67,6 @@ def upgrade() -> None:
     op.add_column("documents", Column("processing_error", Text, nullable=True, comment="处理错误信息"))
     op.add_column("documents", Column("published_at", DateTime(timezone=True), nullable=True, comment="发布时间"))
     op.add_column("documents", Column("doc_metadata", JSON, nullable=True, comment="扩展元数据"))
-    op.create_index("ix_documents_kb_status", "documents", ["knowledge_base_id", "status"])
-    op.create_index("ix_documents_file_hash", "documents", ["tenant_id", "file_hash"])
 
     # =====================================================================
     # 4. document_permissions 表
