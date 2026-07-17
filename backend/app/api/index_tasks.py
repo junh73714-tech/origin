@@ -116,6 +116,17 @@ async def retry_index_task(task_id: str, db: DBSession):
     )
 
 
+@router.get("/status/{document_version_id}", summary="索引状态查询")
+async def get_index_status(
+    document_version_id: str,
+    db: DBSession,
+):
+    """查询指定版本的OpenSearch和pgvector双重索引状态"""
+    service = IndexingService(db)
+    status = await service.get_index_status(document_version_id)
+    return success_response(data=status, message="查询成功")
+
+
 @router.post("/rebuild", summary="重建索引")
 async def rebuild_index(
     db: DBSession,

@@ -593,7 +593,11 @@ class DocumentOrchestrator:
 
     @staticmethod
     def _make_scope_hash(doc: Document) -> str:
-        """生成权限范围哈希（简化版，正式对接成员4后替换为 AccessContext.scope_hash）"""
+        """
+        生成权限范围哈希（简化版，正式对接成员4后替换为 AccessContext.scope_hash）
+
+        TODO(m5): 替换为 PermissionService.get_access_context().scope_hash
+        """
         import hashlib
         raw = f"{doc.tenant_id}:{doc.knowledge_base_id}:{doc.id}:{doc.created_by}"
         return hashlib.sha256(raw.encode()).hexdigest()[:16]
