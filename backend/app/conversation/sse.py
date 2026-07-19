@@ -21,12 +21,15 @@ def iter_chat_sse(
     metadata: dict[str, Any] | None = None,
     chunk_size: int = 24,
     query_id: str | None = None,
+    refusal_reason: str | None = None,
+    evidence_status: str | None = None,
 ) -> Iterable[str]:
     """
     生成符合公共契约的 SSE：
-    - event: message （增量/完成）
-    - event: done
-    同时可发出内部扩展 citation/metadata（成员2可忽略未知事件）。
+    - event: message_start / answer_delta / citation / done
+    - answer_delta 每次都带 data.content + data.done（布尔，无缺省）
+    - done 含 answer、citations，以及可选 refusal_reason / evidence_status
+    同时可发出内部扩展 message/metadata（成员2可忽略未知事件）。
     """
     yield format_sse(
         "message_start",
@@ -48,6 +51,7 @@ def iter_chat_sse(
             data["references"] = references
             data["content"] = answer
         yield format_sse("message", data)
+        # 契约：每次 answer_delta 都显式带 done，避免前端依赖缺省
         yield format_sse("answer_delta", {"content": part, "done": done})
     for cit in references:
         yield format_sse("citation", cit)
@@ -59,7 +63,7 @@ def iter_chat_sse(
             "answer_type": answer_type,
         },
     )
-    done_payload = {
+    done_payload: dict[str, Any] = {
         "conversation_id": conversation_id,
         "message_id": message_id,
         "trace_id": trace_id,
@@ -67,6 +71,8 @@ def iter_chat_sse(
         "answer_type": answer_type,
         "citations": references,
         "query_id": query_id,
+        "refusal_reason": refusal_reason,
+        "evidence_status": evidence_status,
     }
     yield format_sse("done", done_payload)
 

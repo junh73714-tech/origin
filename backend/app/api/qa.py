@@ -225,6 +225,8 @@ async def chat(
                     "cancelled": state.cancelled,
                 },
                 query_id=query_id,
+                refusal_reason=state.refusal_reason,
+                evidence_status=state.evidence_status or None,
             ):
                 yield chunk
         except Exception as exc:  # noqa: BLE001

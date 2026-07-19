@@ -112,32 +112,10 @@ class StandardQA(BaseModel):
         index=True,
         comment="所属知识库",
     )
-    # === 适用范围 ===
-    knowledge_base_id: Mapped[str] = mapped_column(
-        String(64),
-        ForeignKey("knowledge_bases.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-        comment="所属知识库",
-    )
     applicable_roles: Mapped[list | None] = mapped_column(JSONB, nullable=True, comment="适用角色列表")
     applicable_departments: Mapped[list | None] = mapped_column(JSONB, nullable=True, comment="适用部门列表")
     # 标准问答不得拥有比来源文档更大的访问范围
     access_scope: Mapped[dict | None] = mapped_column(JSONB, nullable=True, comment="访问范围约束")
-
-    # === 基础内容 ===
-    question: Mapped[str] = mapped_column(Text, nullable=False)
-    answer: Mapped[str] = mapped_column(Text, nullable=False)
-    keywords: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
-    category: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
-    status: Mapped[str] = mapped_column(String(50), nullable=False, default="draft")
-    priority: Mapped[int] = mapped_column(default=0, nullable=False)
-    view_count: Mapped[int] = mapped_column(default=0, nullable=False)
-    use_count: Mapped[int] = mapped_column(default=0, nullable=False)
-    qa_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True, comment="元数据")
-    published_at: Mapped[str | None] = mapped_column(nullable=True)
-    expired_at: Mapped[str | None] = mapped_column(nullable=True)
->>>>>>> origin/develop
 
     # === 来源绑定 ===
     source_document_id: Mapped[str | None] = mapped_column(
@@ -206,7 +184,7 @@ class StandardQA(BaseModel):
     negative_feedback_count: Mapped[int] = mapped_column(default=0, nullable=False, comment="负向反馈次数")
 
     # === 扩展元数据 ===
-    metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True, comment="扩展元数据")
+    qa_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True, comment="扩展元数据")
 
     # === 关系 ===
     knowledge_base: Mapped["KnowledgeBase"] = relationship("KnowledgeBase")
@@ -413,7 +391,7 @@ class CandidateQA(BaseModel):
     )
 
     # === 扩展元数据 ===
-    metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True, comment="扩展元数据")
+    qa_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True, comment="扩展元数据")
 
     # === 关系 ===
     standard_qa: Mapped["StandardQA | None"] = relationship("StandardQA")
@@ -545,7 +523,7 @@ class Conversation(BaseModel):
     session_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
-    conv_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True, comment="元数据")
+    conv_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
 
     # 关系
     messages: Mapped[list["Message"]] = relationship(
@@ -583,7 +561,7 @@ class Message(BaseModel):
     references: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     feedback: Mapped[str | None] = mapped_column(String(50), nullable=True)  # positive, negative
     feedback_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
-    msg_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True, comment="元数据")
+    msg_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
 
     # 关系
     conversation: Mapped["Conversation"] = relationship("Conversation", back_populates="messages")

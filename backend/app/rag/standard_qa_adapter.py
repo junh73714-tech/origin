@@ -92,21 +92,51 @@ def map_member7_response(response: dict[str, Any] | None) -> StandardQAMatchResu
     return map_member7_item_to_result(results[0], matched_flag=bool(response.get("matched", True)))
 
 
+_BG_LOOP: asyncio.AbstractEventLoop | None = None
+_BG_THREAD: Any = None
+
+
+def _ensure_bg_loop() -> asyncio.AbstractEventLoop:
+    """为同步桥接维护常驻事件循环，避免反复 asyncio.run 关闭连接。"""
+    global _BG_LOOP, _BG_THREAD
+    import threading
+
+    if _BG_LOOP is not None and _BG_LOOP.is_running():
+        return _BG_LOOP
+
+    loop = asyncio.new_event_loop()
+    ready = threading.Event()
+
+    def _runner() -> None:
+        asyncio.set_event_loop(loop)
+        ready.set()
+        loop.run_forever()
+
+    t = threading.Thread(target=_runner, name="m7-qa-bridge-loop", daemon=True)
+    t.start()
+    ready.wait(timeout=5)
+    _BG_LOOP = loop
+    _BG_THREAD = t
+    return loop
+
+
 def _run_maybe_async(coro_or_value: Any) -> Any:
     """在同步协议内执行可能为协程的成员7调用。"""
     if not inspect.isawaitable(coro_or_value):
         return coro_or_value
     try:
-        loop = asyncio.get_running_loop()
+        running = asyncio.get_running_loop()
     except RuntimeError:
-        loop = None
-    if loop is not None and loop.is_running():
-        # 已在事件循环中：用独立线程跑，避免嵌套 deadlock
-        import concurrent.futures
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            return pool.submit(asyncio.run, coro_or_value).result()
-    return asyncio.run(coro_or_value)
+        running = None
+    if running is not None and running.is_running():
+        # 已在事件循环中：丢到常驻后台循环，避免嵌套 deadlock
+        bg = _ensure_bg_loop()
+        fut = asyncio.run_coroutine_threadsafe(coro_or_value, bg)
+        return fut.result(timeout=120)
+    # 无运行中循环：同样走常驻循环，避免 asyncio.run 关闭后连接失效
+    bg = _ensure_bg_loop()
+    fut = asyncio.run_coroutine_threadsafe(coro_or_value, bg)
+    return fut.result(timeout=120)
 
 
 class Member7StandardQABridge:

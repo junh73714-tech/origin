@@ -16,6 +16,11 @@ from sqlalchemy.pool import NullPool
 from app.core.config import settings
 
 
+# Neon 等云库要求 SSL；本地 Docker 不强制
+_connect_args: dict = {}
+if "neon.tech" in (settings.database.host or ""):
+    _connect_args["ssl"] = True
+
 # 创建异步引擎
 engine = create_async_engine(
     settings.database.async_url,
@@ -23,6 +28,7 @@ engine = create_async_engine(
     pool_size=settings.database.pool_size,
     max_overflow=settings.database.max_overflow,
     pool_pre_ping=True,
+    connect_args=_connect_args,
 )
 
 # 创建会话工厂
