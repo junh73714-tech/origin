@@ -27,6 +27,7 @@ from app.providers.llm.provider import get_llm_provider
 from app.providers.reranker.provider import get_reranker_provider
 from app.rag.graph import QAGraph
 from app.rag.metrics import inc_cache, inc_query
+from app.rag.standard_qa_adapter import create_standard_qa_matcher
 from app.retrieval.keyword import InMemoryKeywordIndex, KeywordRetriever
 from app.retrieval.permission_adapter import DefaultPermissionAdapter, compute_scope_hash
 from app.retrieval.service import HybridRetrievalService
@@ -44,7 +45,8 @@ _demo_vector = VectorRetriever(
     store=InMemoryVectorStore([]),
 )
 _retrieval = HybridRetrievalService(_demo_keyword, _demo_vector)
-_graph = QAGraph(retrieval=_retrieval)
+# USE_MEMBER7_STANDARD_QA=1 时走成员7桥接，否则 Mock
+_graph = QAGraph(retrieval=_retrieval, standard_qa=create_standard_qa_matcher())
 _invalidator = IdempotentCacheInvalidator(default_query_cache)
 _permission = DefaultPermissionAdapter()
 
