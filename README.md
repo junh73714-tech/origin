@@ -39,13 +39,14 @@ cp .env.example .env      # 默认 VITE_USE_MOCK=true，走本地 Mock
 npm run dev               # http://localhost:5202
 ```
 
-### 演示账号（Mock）
+### 演示账号
 
 | 账号 | 密码 | 说明 |
 |---|---|---|
 | user | 123456 | 普通用户，可访问 2 个知识库 |
 | guest | 123456 | 无可访问知识库（演示空状态提示） |
-| locked | 123456 | 被禁用账号（演示禁用提示） |
+
+> 演示账号需在真后端预创建（通过 `POST /api/v1/auth/register` 或由后端 seed）。禁用账号与连续输错锁定的演示由本地 Mock 模式（`VITE_USE_MOCK=true`）支持；当前真实后端暂未实现锁定接口。
 
 ### 演示问答场景（Mock）
 

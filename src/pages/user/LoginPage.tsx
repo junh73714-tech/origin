@@ -53,8 +53,8 @@ export function LoginPage() {
         </Typography.Paragraph>
         <LoginForm loading={loading} error={error} onSubmit={handleSubmit} />
         <Typography.Paragraph type="secondary" style={{ fontSize: 12, marginTop: 8 }}>
-          演示账号：user / 123456（普通用户）、guest / 123456（无知识库权限）、locked /
-          123456（禁用账号）；user 连续输错 3 次密码触发临时锁定。
+          演示账号（已在真后端预创建）：user / 123456（普通用户）、guest / 123456（无知识库权限）。
+          注：禁用账号与连续输错锁定的演示由本地 Mock 模式（VITE_USE_MOCK=true）支持；当前真实后端暂未实现锁定接口。
         </Typography.Paragraph>
       </Card>
     </div>
