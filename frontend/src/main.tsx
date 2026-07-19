@@ -1,8 +1,9 @@
+/**
+ * 应用入口文件
+ * 成员1：公共基础 & 成员3：管理后台
+ */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import { ConfigProvider } from 'antd';
-import zhCN from 'antd/locale/zh_CN';
 import dayjs from 'dayjs';
 
 import App from './App';
@@ -14,19 +15,6 @@ dayjs.locale('zh-cn');
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <ConfigProvider
-        locale={zhCN}
-        theme={{
-          token: {
-            colorPrimary: '#1890ff',
-            borderRadius: 4,
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-          },
-        }}
-      >
-        <App />
-      </ConfigProvider>
-    </BrowserRouter>
+    <App />
   </React.StrictMode>
 );
