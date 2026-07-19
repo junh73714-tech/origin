@@ -285,6 +285,9 @@ class QASource(BaseModel):
         comment="来源文档",
     )
     document_version: Mapped[int] = mapped_column(nullable=False, comment="来源文档版本号")
+    document_version_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, comment="来源文档版本 UUID（关联 document_versions.id）",
+    )
     chunk_id: Mapped[str] = mapped_column(
         String(64),
         ForeignKey("document_chunks.id", ondelete="CASCADE"),

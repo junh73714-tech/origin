@@ -384,10 +384,13 @@ class QAMatchingService:
         """构建引用来源列表"""
         citations = []
         for source in (qa.sources or []):
+            # document_version_id 优先使用真实 UUID（来自 QASource.document_version_id）
+            # 若尚未回填则回退为源文件路径占位符
+            dv_uuid = source.document_version_id or f"doc_{source.document_id}_v{source.document_version}"
             citations.append({
                 "document_id": source.document_id,
-                "document_version": source.document_version,  # 整数版本号
-                "document_version_id": f"doc_{source.document_id}_v{source.document_version}",  # 占位符，需与成员5对齐
+                "document_version": source.document_version,  # 整数版本号（向后兼容）
+                "document_version_id": dv_uuid,               # 文档版本 UUID（关联 document_versions.id）
                 "chunk_id": source.chunk_id,
                 "knowledge_base_id": source.knowledge_base_id,
                 "is_primary": source.is_primary,
