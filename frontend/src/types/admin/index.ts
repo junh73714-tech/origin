@@ -519,12 +519,10 @@ export interface LowQualityAnswer {
 
 // ==================== 检索调试相关 ====================
 
-/** 检索调试请求 */
+/** 检索调试请求 - 对齐成员6 POST /api/v1/qa/debug/query */
 export interface SearchDebugRequest {
-  question: string;
-  user_id?: string;
+  content: string;
   knowledge_base_ids?: string[];
-  params?: SearchDebugParams;
 }
 
 /** 检索调试参数 */
@@ -537,51 +535,129 @@ export interface SearchDebugParams {
   similarity_threshold?: number;
 }
 
-/** 检索调试结果 */
+/** 权限过滤摘要 - 对齐成员6 permission_filter_summary */
+export interface PermissionFilterSummary {
+  scope_hash: string;
+  deny_document_ids: string[];
+  knowledge_base_ids: string[];
+}
+
+/** 检索上下文片段 - 对齐成员6 final_context 元素 */
+export interface SearchContextSnippet {
+  citation_id: string;
+  document_id: string;
+  chunk_id: string;
+  title_path?: string;
+  status?: string;
+  quote_preview: string;
+}
+
+/** 检索调试结果 - 对齐成员6 POST /api/v1/qa/debug/query 响应 */
 export interface SearchDebugResult {
-  request_id: string;
-  original_question: string;
-  rewritten_question?: string;
+  trace_id: string;
+  conversation_id?: string;
+  message_id?: string;
+  query_id?: string;
+  /** 原始问题 */
+  original_query: string;
+  /** 改写后问题 */
+  rewritten_query?: string;
+  /** 意图识别 */
   intent?: string;
+  /** 关键词 */
   keywords: string[];
+  /** 实体 */
   entities: string[];
-  permission_filter: string;
-  matched_qa?: {
+  /** 权限过滤摘要 */
+  permission_filter_summary: PermissionFilterSummary;
+  /** 标准问答匹配 */
+  standard_qa_match?: {
     id: string;
     question: string;
     answer: string;
     score: number;
   };
-  keyword_results: SearchResultItem[];
-  vector_results: SearchResultItem[];
-  rrf_results: SearchResultItem[];
-  reranker_results: SearchResultItem[];
-  final_context: string;
-  evidence_coverage: number;
-  final_answer?: string;
-  references: Reference[];
-  rejection_reason?: string;
-  stage_timing: StageTiming[];
+  /** 关键词检索结果（chunk_id 列表） */
+  keyword_results: string[];
+  /** 向量检索结果（chunk_id 列表） */
+  vector_results: string[];
+  /** RRF 融合结果（chunk_id 列表） */
+  rrf_results: string[];
+  /** Reranker 重排结果（chunk_id 列表） */
+  reranker_results: string[];
+  /** 最终上下文片段 */
+  final_context: SearchContextSnippet[];
+  /** 证据评分 */
+  evidence_score?: number;
+  /** 证据状态: ok / insufficient / conflict */
+  evidence_status?: string;
+  /** 最终回答 */
+  answer?: string;
+  /** 引用列表 */
+  citations: Citation[];
+  /** 拒答原因 */
+  refusal_reason?: string;
+  /** 各阶段耗时（毫秒） */
+  timings_ms: Record<string, number>;
+  /** 调试信息（内部扩展） */
+  debug?: Record<string, unknown>;
 }
 
-/** 检索结果项 */
+/** 检索结果项（SSE citation 事件） */
 export interface SearchResultItem {
-  rank: number;
-  score: number;
-  document_id: string;
-  document_name: string;
+  citation_id: string;
   chunk_id: string;
-  chunk_content: string;
-  source: 'keyword' | 'vector' | 'rrf' | 'reranker';
+  document_id: string;
+  document_version_id?: string;
+  quote: string;
+  page_start?: number;
+  page_end?: number;
+  title_path?: string;
+  score: number;
 }
 
-/** 引用 */
-export interface Reference {
-  document_id: string;
-  document_name: string;
+/** 引用 - 对齐成员6 Citation */
+export interface Citation {
+  citation_id: string;
   chunk_id: string;
-  chunk_content: string;
-  relevance_score: number;
+  document_id: string;
+  document_version_id?: string;
+  quote: string;
+  page_start?: number;
+  page_end?: number;
+  title_path?: string;
+  score: number;
+}
+
+/** SSE 事件类型 */
+export type SSEEventType = 'message_start' | 'answer_delta' | 'citation' | 'done' | 'message' | 'metadata';
+
+/** SSE message_start 事件 */
+export interface SSEMessageStart {
+  conversation_id: string;
+  message_id: string;
+  trace_id: string;
+  answer_type: string;
+  query_id: string;
+}
+
+/** SSE answer_delta 事件 */
+export interface SSEAnswerDelta {
+  content: string;
+  done: boolean;
+}
+
+/** SSE done 事件 */
+export interface SSEDone {
+  conversation_id: string;
+  message_id: string;
+  trace_id: string;
+  query_id: string;
+  answer: string;
+  answer_type: string;
+  citations: Citation[];
+  refusal_reason?: string;
+  evidence_status?: string;
 }
 
 /** 各阶段耗时 */
