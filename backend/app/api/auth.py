@@ -31,6 +31,7 @@ from app.services.auth_service import (
 )
 
 auth_router = APIRouter()
+router = auth_router  # main.py: from app.api.auth import router as auth_router
 security = HTTPBearer(auto_error=False)
 
 

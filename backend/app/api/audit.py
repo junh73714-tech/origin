@@ -13,8 +13,7 @@ from app.schemas.common import PaginationParams
 from app.services.audit_service import AuditService
 
 audit_router = APIRouter()
-
-
+router = audit_router  # main.py 兼容别名
 @audit_router.get("/audit-logs", tags=["审计"])
 async def list_audit_logs_api(
     db: DBSession,

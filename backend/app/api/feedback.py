@@ -1,6 +1,6 @@
 """
-反馈与运营路由（成员7）
-提供用户反馈提交、未命中问题、高频问题、低质量答案、知识缺口等运营接口
+??????????7?
+???????????????????????????????????
 """
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -21,7 +21,7 @@ feedback_router = router
 
 
 # ============================================================================
-# 用户反馈
+# ????
 # ============================================================================
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
@@ -31,8 +31,8 @@ async def submit_feedback(
     access: RequiredAccess,
 ):
     """
-    提交用户反馈
-    支持：点赞（positive）、点踩（negative）、纠错（correction）
+    ??????
+    ??????positive?????negative?????correction?
     """
     message_id = data.get("message_id", "")
     feedback_type = data.get("feedback_type", data.get("feedback", ""))
@@ -44,7 +44,7 @@ async def submit_feedback(
     if feedback_type not in ("positive", "negative", "correction"):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="反馈类型必须是 positive、negative 或 correction",
+            detail="??????? positive?negative ? correction",
         )
 
     feedback = UserFeedback(
@@ -60,7 +60,7 @@ async def submit_feedback(
     )
     db.add(feedback)
 
-    # 更新标准问答的反馈计数
+    # ???????????
     if qa_id and feedback_type in ("positive", "negative"):
         stmt = select(StandardQA).where(
             StandardQA.id == qa_id,
@@ -85,7 +85,7 @@ async def submit_feedback(
 
     return success_response(
         data={"id": feedback.id, "feedback_type": feedback_type},
-        message="反馈提交成功",
+        message="??????",
     )
 
 
@@ -95,13 +95,13 @@ async def list_feedbacks(
     access: RequiredAccess,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    feedback_type: str | None = Query(default=None, description="反馈类型筛选"),
-    is_resolved: bool | None = Query(default=None, description="是否已处理"),
-    qa_id: str | None = Query(default=None, description="标准问答 ID 筛选"),
+    feedback_type: str | None = Query(default=None, description="??????"),
+    is_resolved: bool | None = Query(default=None, description="?????"),
+    qa_id: str | None = Query(default=None, description="???? ID ??"),
     sort_by: str = Query(default="created_at"),
     sort_order: str = Query(default="desc"),
 ):
-    """查询反馈列表"""
+    """??????"""
     conditions = [
         UserFeedback.tenant_id == access.tenant_id,
         UserFeedback.deleted_at.is_(None),
@@ -160,7 +160,7 @@ async def resolve_feedback(
     db: DBSession,
     access: RequiredAccess,
 ):
-    """标记反馈为已处理"""
+    """????????"""
     stmt = select(UserFeedback).where(
         UserFeedback.id == feedback_id,
         UserFeedback.deleted_at.is_(None),
@@ -168,18 +168,18 @@ async def resolve_feedback(
     result = await db.execute(stmt)
     feedback = result.scalar_one_or_none()
     if feedback is None:
-        raise HTTPException(status_code=404, detail="反馈不存在")
+        raise HTTPException(status_code=404, detail="?????")
 
     feedback.is_resolved = True
     feedback.resolved_by = access.user_id
     feedback.resolved_at = datetime.now(timezone.utc)
     await db.flush()
 
-    return success_response(data={"id": feedback_id}, message="反馈已处理")
+    return success_response(data={"id": feedback_id}, message="?????")
 
 
 # ============================================================================
-# 知识运营分析
+# ??????
 # ============================================================================
 
 @router.get("/operations/unanswered")
@@ -188,12 +188,12 @@ async def get_unanswered_questions(
     access: RequiredAccess,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    days: int = Query(default=30, description="统计天数"),
-    knowledge_base_id: str | None = Query(default=None, description="知识库 ID 筛选"),
+    days: int = Query(default=30, description="????"),
+    knowledge_base_id: str | None = Query(default=None, description="??? ID ??"),
 ):
     """
-    查询未命中问题
-    识别用户提问但未命中标准问答且 RAG 拒答或低质量回答的情况
+    ???????
+    ??????????????? RAG ???????????
     """
     since = datetime.now(timezone.utc) - timedelta(days=days)
 
@@ -202,12 +202,12 @@ async def get_unanswered_questions(
         Message.role == "user",
         Message.created_at >= since,
         Message.deleted_at.is_(None),
-        # 未匹配到标准问答
+        # ????????
         Message.matched_qa_id.is_(None),
     ]
 
     if knowledge_base_id:
-        # 通过 metadata 中的 knowledge_base_id 过滤
+        # ?? metadata ?? knowledge_base_id ??
         conditions.append(
             Message.metadata.op("->>")("knowledge_base_id") == knowledge_base_id
         )
@@ -246,17 +246,17 @@ async def get_unanswered_questions(
 async def get_high_frequency_questions(
     db: DBSession,
     access: RequiredAccess,
-    days: int = Query(default=7, description="统计天数"),
-    top_n: int = Query(default=20, ge=1, le=100, description="返回数量"),
+    days: int = Query(default=7, description="????"),
+    top_n: int = Query(default=20, ge=1, le=100, description="????"),
     knowledge_base_id: str | None = Query(default=None),
 ):
     """
-    查询高频问题
-    按时间窗口统计高频查询
+    ??????
+    ???????????
     """
     since = datetime.now(timezone.utc) - timedelta(days=days)
 
-    # 统计用户消息中的高频问题
+    # ????????????
     conditions = [
         Message.tenant_id == access.tenant_id,
         Message.role == "user",
@@ -305,16 +305,16 @@ async def get_low_quality_answers(
     access: RequiredAccess,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    days: int = Query(default=30, description="统计天数"),
-    min_negative_feedback: int = Query(default=3, description="最少负反馈数量"),
+    days: int = Query(default=30, description="????"),
+    min_negative_feedback: int = Query(default=3, description="???????"),
 ):
     """
-    查询低质量答案
-    基于用户点踩和引用质量识别
+    ???????
+    ?????????????
     """
     since = datetime.now(timezone.utc) - timedelta(days=days)
 
-    # 查找负反馈较多的标准问答
+    # ????????????
     stmt = (
         select(
             StandardQA,
@@ -338,7 +338,7 @@ async def get_low_quality_answers(
     result = await db.execute(stmt)
     rows = result.all()
 
-    # 统计总数
+    # ????
     total = len(rows)
 
     return paginated_response(
@@ -365,19 +365,19 @@ async def get_low_quality_answers(
 async def get_knowledge_gaps(
     db: DBSession,
     access: RequiredAccess,
-    days: int = Query(default=30, description="统计天数"),
+    days: int = Query(default=30, description="????"),
     top_n: int = Query(default=20, ge=1, le=100),
 ):
     """
-    查询知识缺口任务
-    来源包括：高频拒答、多次改写仍未命中、用户集中点踩、
-    同一问题冲突答案、某部门高频询问但无正式文档
+    ????????
+    ??????????????????????????
+    ??????????????????????
     """
     since = datetime.now(timezone.utc) - timedelta(days=days)
 
     gaps: list[dict[str, Any]] = []
 
-    # 1. 高频未命中问题
+    # 1. ???????
     unmet_stmt = (
         select(
             Message.content,
@@ -403,10 +403,10 @@ async def get_knowledge_gaps(
                 "type": "unanswered",
                 "content": row.content[:200],
                 "frequency": row.count,
-                "source": "高频拒答/未命中",
+                "source": "????/???",
             })
 
-    # 2. 高负反馈问答
+    # 2. ??????
     negative_stmt = (
         select(
             StandardQA,
@@ -433,10 +433,10 @@ async def get_knowledge_gaps(
             "qa_id": row.StandardQA.id,
             "content": row.StandardQA.question[:200],
             "negative_count": row.neg_count,
-            "source": "用户集中点踩",
+            "source": "??????",
         })
 
-    # 按关注度排序
+    # ??????
     gaps.sort(key=lambda x: x.get("frequency", x.get("negative_count", 0)), reverse=True)
 
     return success_response(

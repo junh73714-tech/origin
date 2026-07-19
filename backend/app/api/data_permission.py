@@ -21,8 +21,7 @@ from app.schemas.identity import (
 from app.services.data_permission_service import DataPermissionService
 
 data_permission_router = APIRouter()
-
-
+router = data_permission_router  # main.py 兼容别名
 # ============ 知识库权限路由 ============
 
 @data_permission_router.post("/knowledge-base-permissions", response_model=KnowledgeBasePermissionResponse, tags=["数据权限"])

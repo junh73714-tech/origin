@@ -8,6 +8,7 @@ from typing import Any
 
 from sqlalchemy import and_, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.logging import get_logger
 from app.models.qa import QAStatus, QuestionVariant, StandardQA
@@ -179,6 +180,10 @@ class QAMatchingService:
 
         stmt = (
             select(StandardQA)
+            .options(
+                selectinload(StandardQA.sources),
+                selectinload(StandardQA.variants),
+            )
             .where(and_(*conditions))
             .order_by(StandardQA.priority.desc(), StandardQA.use_count.desc())
             .limit(200)  # 限制候选数量，避免全表扫描

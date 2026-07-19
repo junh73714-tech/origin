@@ -16,12 +16,12 @@ from app.core.exceptions import (
 )
 from app.models.document import (
     KnowledgeBase,
-    KnowledgeBasePermission,
     Document,
     DocumentChunk,
     IndexTask,
     DocumentProcessLog,
 )
+from app.models.identity import KnowledgeBasePermission
 from app.schemas.document import (
     KnowledgeBaseCreate,
     KnowledgeBaseUpdate,

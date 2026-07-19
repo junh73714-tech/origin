@@ -37,6 +37,7 @@ from app.models.evaluation import (
     EvalResult,
 )
 from app.models.audit import AuditLog, OutboxEvent, SecurityEvent
+from app.models.retrieval_logs import Citation, QueryLog, RetrievalLog
 
 __all__ = [
     # Base
@@ -87,4 +88,8 @@ __all__ = [
     "AuditLog",
     "SecurityEvent",
     "OutboxEvent",
+    # Retrieval / RAG logs (成员6)
+    "Citation",
+    "QueryLog",
+    "RetrievalLog",
 ]

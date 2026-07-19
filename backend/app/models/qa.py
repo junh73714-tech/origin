@@ -23,9 +23,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import BaseModel, SoftDeleteMixin
 
 
-# ============================================================================
+# ======
 # 标准问答状态常量
-# ============================================================================
+# ======
 
 class QAStatus:
     """标准问答状态枚举"""
@@ -80,9 +80,9 @@ QA_STATUS_TRANSITIONS: dict[str, list[str]] = {
 }
 
 
-# ============================================================================
+# ======
 # 标准问答模型（增强版）
-# ============================================================================
+# ======
 
 class StandardQA(BaseModel):
     """
@@ -184,7 +184,9 @@ class StandardQA(BaseModel):
     negative_feedback_count: Mapped[int] = mapped_column(default=0, nullable=False, comment="负向反馈次数")
 
     # === 扩展元数据 ===
-    standard_qa_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True, comment="扩展元数据")
+
+
+
 
     # === 关系 ===
     knowledge_base: Mapped["KnowledgeBase"] = relationship("KnowledgeBase")
@@ -219,9 +221,9 @@ class StandardQA(BaseModel):
         return f"<StandardQA {self.id} v{self.version} [{self.status}]>"
 
 
-# ============================================================================
+# ======
 # 问题变体模型
-# ============================================================================
+# ======
 
 class QuestionVariant(BaseModel):
     """
@@ -259,9 +261,9 @@ class QuestionVariant(BaseModel):
         return f"<QuestionVariant {self.id} [{self.variant_type}]>"
 
 
-# ============================================================================
+# ======
 # 问答来源绑定模型
-# ============================================================================
+# ======
 
 class QASource(BaseModel):
     """
@@ -318,9 +320,9 @@ class QASource(BaseModel):
         return f"<QASource {self.qa_id} -> doc:{self.document_id} v{self.document_version}>"
 
 
-# ============================================================================
+# ======
 # 候选问答模型（增强版）
-# ============================================================================
+# ======
 
 class CandidateQA(BaseModel):
     """
@@ -394,7 +396,10 @@ class CandidateQA(BaseModel):
     )
 
     # === 扩展元数据 ===
+
     candidate_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True, comment="扩展元数据")
+
+
 
     # === 关系 ===
     standard_qa: Mapped["StandardQA | None"] = relationship("StandardQA")
@@ -409,9 +414,9 @@ class CandidateQA(BaseModel):
         return f"<CandidateQA {self.id} [{self.status}]>"
 
 
-# ============================================================================
+# ======
 # 审核记录模型（增强版）
-# ============================================================================
+# ======
 
 class QAReviewRecord(BaseModel):
     """
@@ -453,9 +458,9 @@ class QAReviewRecord(BaseModel):
         return f"<QAReviewRecord {self.qa_id} {self.action}>"
 
 
-# ============================================================================
+# ======
 # 质量检查结果模型
-# ============================================================================
+# ======
 
 class QAQualityCheck(BaseModel):
     """
@@ -505,17 +510,17 @@ class QAQualityCheck(BaseModel):
         return f"<QAQualityCheck {self.qa_id} {self.check_name}={self.check_result}>"
 
 
-# ============================================================================
+# ======
 # 保留旧模型别名（兼容性）
-# ============================================================================
+# ======
 
 QaReference = QASource
 QaAuditRecord = QAReviewRecord
 
 
-# ============================================================================
+# ======
 # 会话与消息模型
-# ============================================================================
+# ======
 
 class Conversation(BaseModel):
     """会话模型"""
@@ -526,7 +531,7 @@ class Conversation(BaseModel):
     session_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
-    conv_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True, comment="元数据")
+    conv_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
 
     # 关系
     messages: Mapped[list["Message"]] = relationship(
@@ -564,7 +569,7 @@ class Message(BaseModel):
     references: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     feedback: Mapped[str | None] = mapped_column(String(50), nullable=True)  # positive, negative
     feedback_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
-    msg_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True, comment="元数据")
+    msg_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
 
     # 关系
     conversation: Mapped["Conversation"] = relationship("Conversation", back_populates="messages")

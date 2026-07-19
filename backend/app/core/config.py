@@ -27,7 +27,7 @@ class DatabaseSettings(BaseSettings):
     def sync_url(self) -> str:
         return f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
 
-    model_config = SettingsConfigDict(env_prefix="DATABASE_")
+    model_config = SettingsConfigDict(env_prefix="DATABASE_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 class RedisSettings(BaseSettings):
@@ -43,7 +43,7 @@ class RedisSettings(BaseSettings):
             return f"redis://:{self.password}@{self.host}:{self.port}/{self.db}"
         return f"redis://{self.host}:{self.port}/{self.db}"
 
-    model_config = SettingsConfigDict(env_prefix="REDIS_")
+    model_config = SettingsConfigDict(env_prefix="REDIS_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 class MinIOSettings(BaseSettings):
@@ -55,7 +55,7 @@ class MinIOSettings(BaseSettings):
     bucket_documents: str = "documents"
     bucket_temp: str = "temp"
 
-    model_config = SettingsConfigDict(env_prefix="MINIO_")
+    model_config = SettingsConfigDict(env_prefix="MINIO_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 class OpenSearchSettings(BaseSettings):
@@ -70,7 +70,7 @@ class OpenSearchSettings(BaseSettings):
     def url(self) -> str:
         return f"{self.scheme}://{self.user}:{self.password}@{self.host}:{self.port}"
 
-    model_config = SettingsConfigDict(env_prefix="OPENSEARCH_")
+    model_config = SettingsConfigDict(env_prefix="OPENSEARCH_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 class LLMSettings(BaseSettings):
@@ -178,16 +178,16 @@ class AppSettings(BaseSettings):
     log_level: str = "INFO"
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
-    # 子配置
-    database: DatabaseSettings = DatabaseSettings()
-    redis: RedisSettings = RedisSettings()
-    minio: MinIOSettings = MinIOSettings()
-    opensearch: OpenSearchSettings = OpenSearchSettings()
-    llm: LLMSettings = LLMSettings()
-    embedding: EmbeddingSettings = EmbeddingSettings()
-    reranker: RerankerSettings = RerankerSettings()
-    celery: CelerySettings = CelerySettings()
-    security: SecuritySettings = SecuritySettings()
+    # 子配置：用 Field(default_factory=...) 避免共享可变默认实例（兼容 Pydantic v2）
+    database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+    redis: RedisSettings = Field(default_factory=RedisSettings)
+    minio: MinIOSettings = Field(default_factory=MinIOSettings)
+    opensearch: OpenSearchSettings = Field(default_factory=OpenSearchSettings)
+    llm: LLMSettings = Field(default_factory=LLMSettings)
+    embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
+    reranker: RerankerSettings = Field(default_factory=RerankerSettings)
+    celery: CelerySettings = Field(default_factory=CelerySettings)
+    security: SecuritySettings = Field(default_factory=SecuritySettings)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

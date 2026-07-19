@@ -39,6 +39,7 @@ from app.services.organization_service import (
 )
 
 organization_router = APIRouter()
+router = organization_router  # main.py 兼容别名
 
 
 # ============ 部门路由 ============

@@ -42,8 +42,7 @@ from app.services.rbac_service import (
 )
 
 rbac_router = APIRouter()
-
-
+router = rbac_router  # main.py 兼容别名
 # ============ 权限路由 ============
 
 @rbac_router.post("/permissions", response_model=PermissionResponse, tags=["RBAC"])

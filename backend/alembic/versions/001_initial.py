@@ -1,6 +1,8 @@
 # Initial migration
 # Creates all tables for the RAG Knowledge Platform
 
+import alembic.op as op
+
 revision = '001'
 down_revision = None
 branch_labels = None
