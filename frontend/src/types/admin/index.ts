@@ -242,6 +242,58 @@ export interface UserPermissionSummary {
 
 // ==================== 知识库与文档管理相关 ====================
 
+/** 知识库状态 */
+export type KnowledgeBaseStatus = 'active' | 'disabled';
+
+/** 知识库信息 - 对齐成员5 KnowledgeBaseResponse */
+export interface KnowledgeBase {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  is_public: boolean;
+  status: KnowledgeBaseStatus;
+  business_domain?: string;
+  settings?: Record<string, unknown>;
+  document_count: number;
+  chunk_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 知识库详情 - 对齐成员5 KnowledgeBaseDetailResponse */
+export interface KnowledgeBaseDetail extends KnowledgeBase {
+  created_by: string;
+  updated_by?: string;
+}
+
+/** 知识库统计 - 对齐成员5 KnowledgeBaseStatsResponse */
+export interface KnowledgeBaseStats {
+  knowledge_base_id: string;
+  document_count: number;
+  published_count: number;
+  processing_count: number;
+  failed_count: number;
+  chunk_count: number;
+  indexed_chunk_count: number;
+  total_tokens: number;
+  index_task_pending: number;
+  index_task_failed: number;
+}
+
+/** 知识库权限 - 对齐成员5 KnowledgeBasePermissionResponse */
+export interface KnowledgeBasePermission {
+  id: string;
+  knowledge_base_id: string;
+  principal_type: 'user' | 'role' | 'department' | 'user_group';
+  principal_id: string;
+  permission_type: 'read' | 'write' | 'admin';
+  is_deny: boolean;
+  effective_time?: string;
+  expiration_time?: string;
+  created_at: string;
+}
+
 /** 文档处理状态 */
 export type DocumentStatus =
   | 'pending'
@@ -255,48 +307,130 @@ export type DocumentStatus =
   | 'failed'
   | 'paused';
 
-/** 文档版本信息 */
+/** 文档信息 - 对齐成员5 DocumentResponse */
+export interface Document {
+  id: string;
+  knowledge_base_id: string;
+  name: string;
+  original_filename: string;
+  file_type: string;
+  mime_type: string;
+  file_size: number;
+  file_hash: string;
+  status: DocumentStatus;
+  page_count?: number;
+  char_count?: number;
+  token_count?: number;
+  current_version: number;
+  /** 处理失败原因（长任务进度展示） */
+  processing_error?: string;
+  published_at?: string;
+  doc_metadata?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 文档详情 - 对齐成员5 DocumentDetailResponse */
+export interface DocumentDetail extends Document {
+  created_by: string;
+  updated_by?: string;
+  versions: DocumentVersion[];
+  chunk_count: number;
+}
+
+/** 文档版本信息 - 对齐成员5 DocumentVersionResponse */
 export interface DocumentVersion {
   id: string;
   document_id: string;
+  knowledge_base_id: string;
   version: number;
-  file_path: string;
   file_size: number;
+  file_hash: string;
+  previous_version?: number;
+  is_current_version: boolean;
   change_summary?: string;
-  is_active: boolean;
-  created_by: string;
+  publish_status: string;
+  effective_time?: string;
+  expiration_time?: string;
+  published_at?: string;
   created_at: string;
 }
 
-/** Chunk 信息 */
+/** 文档发布状态 */
+export type DocumentPublishStatus = 'draft' | 'pending_review' | 'published' | 'offlined';
+
+/** Chunk 信息 - 对齐成员5 ChunkResponse */
 export interface ChunkInfo {
   id: string;
   document_id: string;
-  version: number;
-  content: string;
-  content_hash: string;
-  chunk_index: number;
-  char_start: number;
-  char_end: number;
+  document_version_id: string;
+  knowledge_base_id: string;
+  /** 切分序号 */
+  chunk_no: number;
+  /** 标题路径 */
+  title_path?: string;
+  /** 起始页码 */
+  page_start?: number;
+  /** 结束页码 */
+  page_end?: number;
+  /** 清洗后文本 */
+  clean_text: string;
+  /** Token计数 */
+  token_count: number;
+  /** Chunk状态 */
+  status: string;
+  /** 索引状态 */
   index_status: 'pending' | 'keyword_indexed' | 'vector_indexed' | 'both_indexed' | 'failed';
-  metadata?: Record<string, unknown>;
+  created_at: string;
 }
 
-/** 索引任务 */
+/** Chunk 详情 - 对齐成员5 ChunkDetailResponse */
+export interface ChunkDetail extends ChunkInfo {
+  /** 原始文本 */
+  raw_text: string;
+  /** 原文偏移位置 */
+  source_offset: number;
+  /** 内容哈希 */
+  content_hash: string;
+  /** 元数据 */
+  chunk_metadata?: Record<string, unknown>;
+  effective_time?: string;
+  expiration_time?: string;
+}
+
+/** 索引任务 - 对齐成员5 IndexTaskResponse */
 export interface IndexTask {
   id: string;
   document_id: string;
-  document_name: string;
-  task_type: 'keyword' | 'vector' | 'both';
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  /** 前端展示用：文档名称（需额外查询或后端 join） */
+  document_name?: string;
+  document_version_id: string;
+  chunk_id?: string;
+  /** 任务类型: create/update/delete/rebuild/consistency_check */
+  task_type: 'create' | 'update' | 'delete' | 'rebuild' | 'consistency_check';
+  /** 索引目标: opensearch/pgvector/both */
+  target: 'opensearch' | 'pgvector' | 'both';
+  /** 幂等键 */
+  idempotent_key: string;
+  /** 状态: pending/processing/completed/failed */
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  /** 重试次数 */
+  retry_count: number;
+  /** 最大重试次数 */
+  max_retries: number;
+  /** 进度 (0-100) */
   progress: number;
+  /** 总Chunk数 */
   total_chunks: number;
+  /** 已索引Chunk数 */
   indexed_chunks: number;
-  failed_chunks: number;
+  /** 失败Chunk数（前端计算用） */
+  failed_chunks?: number;
+  /** 错误信息 */
   error_message?: string;
   started_at?: string;
   completed_at?: string;
-  updated_at: string;
+  created_at: string;
 }
 
 // ==================== 问答优化相关 ====================
@@ -385,12 +519,10 @@ export interface LowQualityAnswer {
 
 // ==================== 检索调试相关 ====================
 
-/** 检索调试请求 */
+/** 检索调试请求 - 对齐成员6 POST /api/v1/qa/debug/query */
 export interface SearchDebugRequest {
-  question: string;
-  user_id?: string;
+  content: string;
   knowledge_base_ids?: string[];
-  params?: SearchDebugParams;
 }
 
 /** 检索调试参数 */
@@ -403,51 +535,129 @@ export interface SearchDebugParams {
   similarity_threshold?: number;
 }
 
-/** 检索调试结果 */
+/** 权限过滤摘要 - 对齐成员6 permission_filter_summary */
+export interface PermissionFilterSummary {
+  scope_hash: string;
+  deny_document_ids: string[];
+  knowledge_base_ids: string[];
+}
+
+/** 检索上下文片段 - 对齐成员6 final_context 元素 */
+export interface SearchContextSnippet {
+  citation_id: string;
+  document_id: string;
+  chunk_id: string;
+  title_path?: string;
+  status?: string;
+  quote_preview: string;
+}
+
+/** 检索调试结果 - 对齐成员6 POST /api/v1/qa/debug/query 响应 */
 export interface SearchDebugResult {
-  request_id: string;
-  original_question: string;
-  rewritten_question?: string;
+  trace_id: string;
+  conversation_id?: string;
+  message_id?: string;
+  query_id?: string;
+  /** 原始问题 */
+  original_query: string;
+  /** 改写后问题 */
+  rewritten_query?: string;
+  /** 意图识别 */
   intent?: string;
+  /** 关键词 */
   keywords: string[];
+  /** 实体 */
   entities: string[];
-  permission_filter: string;
-  matched_qa?: {
+  /** 权限过滤摘要 */
+  permission_filter_summary: PermissionFilterSummary;
+  /** 标准问答匹配 */
+  standard_qa_match?: {
     id: string;
     question: string;
     answer: string;
     score: number;
   };
-  keyword_results: SearchResultItem[];
-  vector_results: SearchResultItem[];
-  rrf_results: SearchResultItem[];
-  reranker_results: SearchResultItem[];
-  final_context: string;
-  evidence_coverage: number;
-  final_answer?: string;
-  references: Reference[];
-  rejection_reason?: string;
-  stage_timing: StageTiming[];
+  /** 关键词检索结果（chunk_id 列表） */
+  keyword_results: string[];
+  /** 向量检索结果（chunk_id 列表） */
+  vector_results: string[];
+  /** RRF 融合结果（chunk_id 列表） */
+  rrf_results: string[];
+  /** Reranker 重排结果（chunk_id 列表） */
+  reranker_results: string[];
+  /** 最终上下文片段 */
+  final_context: SearchContextSnippet[];
+  /** 证据评分 */
+  evidence_score?: number;
+  /** 证据状态: ok / insufficient / conflict */
+  evidence_status?: string;
+  /** 最终回答 */
+  answer?: string;
+  /** 引用列表 */
+  citations: Citation[];
+  /** 拒答原因 */
+  refusal_reason?: string;
+  /** 各阶段耗时（毫秒） */
+  timings_ms: Record<string, number>;
+  /** 调试信息（内部扩展） */
+  debug?: Record<string, unknown>;
 }
 
-/** 检索结果项 */
+/** 检索结果项（SSE citation 事件） */
 export interface SearchResultItem {
-  rank: number;
-  score: number;
-  document_id: string;
-  document_name: string;
+  citation_id: string;
   chunk_id: string;
-  chunk_content: string;
-  source: 'keyword' | 'vector' | 'rrf' | 'reranker';
+  document_id: string;
+  document_version_id?: string;
+  quote: string;
+  page_start?: number;
+  page_end?: number;
+  title_path?: string;
+  score: number;
 }
 
-/** 引用 */
-export interface Reference {
-  document_id: string;
-  document_name: string;
+/** 引用 - 对齐成员6 Citation */
+export interface Citation {
+  citation_id: string;
   chunk_id: string;
-  chunk_content: string;
-  relevance_score: number;
+  document_id: string;
+  document_version_id?: string;
+  quote: string;
+  page_start?: number;
+  page_end?: number;
+  title_path?: string;
+  score: number;
+}
+
+/** SSE 事件类型 */
+export type SSEEventType = 'message_start' | 'answer_delta' | 'citation' | 'done' | 'message' | 'metadata';
+
+/** SSE message_start 事件 */
+export interface SSEMessageStart {
+  conversation_id: string;
+  message_id: string;
+  trace_id: string;
+  answer_type: string;
+  query_id: string;
+}
+
+/** SSE answer_delta 事件 */
+export interface SSEAnswerDelta {
+  content: string;
+  done: boolean;
+}
+
+/** SSE done 事件 */
+export interface SSEDone {
+  conversation_id: string;
+  message_id: string;
+  trace_id: string;
+  query_id: string;
+  answer: string;
+  answer_type: string;
+  citations: Citation[];
+  refusal_reason?: string;
+  evidence_status?: string;
 }
 
 /** 各阶段耗时 */
