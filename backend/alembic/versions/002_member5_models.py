@@ -1,12 +1,13 @@
 """
-成员5 模型补充迁移
+成员5：文档处理与向量索引模型补充迁移
 
 新增表和字段:
-1. document_process_logs -- 文档处理日志
+1. document_process_logs -- 文档处理日志表
 2. chunk_vectors -- pgvector 向量存储表
-3. 现有表中新增字段 (knowledge_bases, documents, document_versions, document_chunks, index_tasks)
+3. knowledge_bases、documents、document_versions、document_chunks、index_tasks 表新增字段
 
-注意：knowledge_base_permissions 和 document_permissions 表由 003 迁移统一创建
+注意：knowledge_base_permissions 和 document_permissions 表由 005 统一创建
+注意：qa_sources / question_variants 等标准问答表由 003 统一创建
 
 Revision: 002
 Depends: 001 (initial)
