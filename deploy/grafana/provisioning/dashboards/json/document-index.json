@@ -1,0 +1,33 @@
+{
+  "dashboard": {
+    "title": "文档与索引任务",
+    "uid": "m7-document-index",
+    "tags": ["m7", "document", "index"],
+    "panels": [
+      {
+        "title": "文档处理成功率",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [{"expr": "sum(rate(rag_document_processing_total{status=\"success\"}[5m])) / sum(rate(rag_document_processing_total[5m]))", "legendFormat": "成功率"}]
+      },
+      {
+        "title": "文档处理耗时",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [{"expr": "histogram_quantile(0.95, sum(rate(rag_document_processing_duration_seconds_bucket[5m])) by (le))", "legendFormat": "P95"}]
+      },
+      {
+        "title": "索引任务成功率",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+        "targets": [{"expr": "sum(rate(rag_index_task_total{status=\"completed\"}[5m])) by (task_type) / sum(rate(rag_index_task_total[5m])) by (task_type)", "legendFormat": "{{task_type}}"}]
+      },
+      {
+        "title": "进行中的索引任务",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+        "targets": [{"expr": "rag_index_task_in_progress"}]
+      }
+    ]
+  }
+}

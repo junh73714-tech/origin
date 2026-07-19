@@ -60,13 +60,14 @@ def create_app() -> FastAPI:
 
 def register_routes(app: FastAPI) -> None:
     """注册路由"""
-    from app.api.common import health_router
+    from app.api.common.health import router as health_router
     from app.api.auth import router as auth_router
     from app.api.documents import router as documents_router
     from app.api.chunks import router as chunks_router
     from app.api.knowledge_bases import router as knowledge_bases_router
     from app.api.qa import router as qa_router
     from app.api.feedback import router as feedback_router
+    from app.api.evaluation import router as evaluation_router
     from app.api.index_tasks import router as index_tasks_router
     from app.api.organization import router as organization_router
     from app.api.rbac import router as rbac_router
@@ -108,6 +109,14 @@ def register_routes(app: FastAPI) -> None:
 
     # 反馈
     app.include_router(feedback_router, prefix="/api/v1/feedback", tags=["反馈"])
+
+    # 评估
+    app.include_router(evaluation_router, prefix="/api/v1", tags=["评估"])
+
+    # 监控指标端点
+    from app.monitoring import metrics_endpoint, init_monitoring
+    init_monitoring(settings.app.name, "0.1.0")
+    app.add_route("/metrics", metrics_endpoint, methods=["GET"])
 
 
 def register_exception_handlers(app: FastAPI) -> None:

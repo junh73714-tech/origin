@@ -1,0 +1,36 @@
+{
+  "dashboard": {
+    "title": "模型调用与成本",
+    "uid": "m7-model-cost",
+    "tags": ["m7", "llm", "cost"],
+    "panels": [
+      {
+        "title": "LLM 调用量",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [{"expr": "sum(rate(rag_llm_requests_total[5m])) by (model, operation)", "legendFormat": "{{model}} - {{operation}}"}]
+      },
+      {
+        "title": "Token 使用量",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {"expr": "sum(rate(rag_llm_tokens_total{type=\"input\"}[5m])) by (model)", "legendFormat": "{{model}} - Input"},
+          {"expr": "sum(rate(rag_llm_tokens_total{type=\"output\"}[5m])) by (model)", "legendFormat": "{{model}} - Output"}
+        ]
+      },
+      {
+        "title": "Embedding 调用量",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+        "targets": [{"expr": "sum(rate(rag_embedding_requests_total[5m])) by (model)", "legendFormat": "{{model}}"}]
+      },
+      {
+        "title": "LLM 调用 P95 耗时",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+        "targets": [{"expr": "histogram_quantile(0.95, sum(rate(rag_llm_request_duration_seconds_bucket[5m])) by (le, model))", "legendFormat": "{{model}}"}]
+      }
+    ]
+  }
+}

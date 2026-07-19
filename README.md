@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+<<<<<<< HEAD
+# origin
+
+=======
+=======
+>>>>>>> 8de89ee904f686dbe7d52e3b35cdc79ef917eeb2
 # 企业级混合检索 RAG 知识问答平台
 
 企业级混合检索 RAG 知识问答平台，支持 Keyword Retrieval、Vector Retrieval、RRF 融合与 Reranker。
@@ -140,3 +147,7 @@ make reset-dev      # 重置开发环境
 ## 许可证
 
 MIT
+<<<<<<< HEAD
+>>>>>>> 8de89ee904f686dbe7d52e3b35cdc79ef917eeb2
+=======
+>>>>>>> 8de89ee904f686dbe7d52e3b35cdc79ef917eeb2
