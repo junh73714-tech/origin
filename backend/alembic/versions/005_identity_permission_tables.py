@@ -3,8 +3,8 @@
 包括部门、用户组、数据范围、临时授权、登录日志等
 """
 
-revision = '003'
-down_revision = '002'
+revision = '005'
+down_revision = '004'
 branch_labels = None
 depends_on = None
 

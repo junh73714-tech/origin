@@ -1,7 +1,7 @@
 """添加评估模块模型
 
-Revision ID: 003
-Revises: 002
+Revision ID: 004
+Revises: 003
 Create Date: 2026-07-16
 
 成员7：添加 golden_datasets、golden_dataset_versions、eval_cases、eval_runs、eval_results 表
@@ -12,8 +12,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision: str = "003"
-down_revision: Union[str, None] = "002"
+revision: str = "004"
+down_revision: Union[str, None] = "003"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
