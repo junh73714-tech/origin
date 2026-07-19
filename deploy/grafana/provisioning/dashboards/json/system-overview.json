@@ -1,0 +1,100 @@
+{
+  "dashboard": {
+    "title": "系统总览",
+    "uid": "m7-system-overview",
+    "tags": ["m7", "overview", "system"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "API 请求量",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(rag_api_requests_total[5m])) by (endpoint)",
+            "legendFormat": "{{endpoint}}"
+          }
+        ]
+      },
+      {
+        "title": "API 错误率",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(rag_api_errors_total[5m])) by (error_type) / sum(rate(rag_api_requests_total[5m]))",
+            "legendFormat": "{{error_type}}"
+          }
+        ]
+      },
+      {
+        "title": "P50/P95 延迟",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(rag_api_request_duration_seconds_bucket[5m])) by (le, endpoint))",
+            "legendFormat": "P50 - {{endpoint}}"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(rag_api_request_duration_seconds_bucket[5m])) by (le, endpoint))",
+            "legendFormat": "P95 - {{endpoint}}"
+          }
+        ]
+      },
+      {
+        "title": "服务健康状态",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 8, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "rag_service_health",
+            "legendFormat": "{{service_name}}"
+          }
+        ]
+      },
+      {
+        "title": "Celery 队列长度",
+        "type": "graph",
+        "gridPos": {"x": 18, "y": 8, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "rag_celery_queue_length",
+            "legendFormat": "{{queue_name}}"
+          }
+        ]
+      },
+      {
+        "title": "标准问答命中率",
+        "type": "gauge",
+        "gridPos": {"x": 0, "y": 16, "w": 6, "h": 6},
+        "targets": [
+          {
+            "expr": "rag_standard_qa_match_rate"
+          }
+        ]
+      },
+      {
+        "title": "用户反馈统计",
+        "type": "graph",
+        "gridPos": {"x": 6, "y": 16, "w": 9, "h": 6},
+        "targets": [
+          {
+            "expr": "sum(rate(rag_user_feedback_total[1h])) by (feedback_type)",
+            "legendFormat": "{{feedback_type}}"
+          }
+        ]
+      },
+      {
+        "title": "拒答率",
+        "type": "stat",
+        "gridPos": {"x": 15, "y": 16, "w": 4, "h": 6},
+        "targets": [
+          {
+            "expr": "rate(rag_standard_qa_refusal_total[5m])"
+          }
+        ]
+      }
+    ]
+  }
+}

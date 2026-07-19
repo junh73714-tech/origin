@@ -21,6 +21,20 @@ from app.models.qa import (
     QaReference,
     StandardQA,
     UserFeedback,
+    QuestionVariant,
+    QASource,
+    QAReviewRecord,
+    QAQualityCheck,
+    QAStatus,
+    ReviewAction,
+    QA_STATUS_TRANSITIONS,
+)
+from app.models.evaluation import (
+    GoldenDataset,
+    GoldenDatasetVersion,
+    EvalCase,
+    EvalRun,
+    EvalResult,
 )
 from app.models.audit import AuditLog, OutboxEvent, SecurityEvent
 from app.models.retrieval_logs import Citation, QueryLog, RetrievalLog
@@ -54,9 +68,22 @@ __all__ = [
     "CandidateQA",
     "QaReference",
     "QaAuditRecord",
+    "QuestionVariant",
+    "QASource",
+    "QAReviewRecord",
+    "QAQualityCheck",
+    "QAStatus",
+    "ReviewAction",
+    "QA_STATUS_TRANSITIONS",
     "Conversation",
     "Message",
     "UserFeedback",
+    # Evaluation
+    "GoldenDataset",
+    "GoldenDatasetVersion",
+    "EvalCase",
+    "EvalRun",
+    "EvalResult",
     # Audit
     "AuditLog",
     "SecurityEvent",

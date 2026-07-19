@@ -1,0 +1,41 @@
+{
+  "dashboard": {
+    "title": "安全与权限事件",
+    "uid": "m7-security-permission",
+    "tags": ["m7", "security", "permission"],
+    "panels": [
+      {
+        "title": "越权指标监控",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {"expr": "rag_api_errors_total{error_type=\"authorization\"}", "legendFormat": "越权请求"}
+        ]
+      },
+      {
+        "title": "API 错误分布",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [{"expr": "sum(rate(rag_api_errors_total[5m])) by (error_type)", "legendFormat": "{{error_type}}"}]
+      },
+      {
+        "title": "认证失败统计",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 8, "w": 6, "h": 6},
+        "targets": [{"expr": "sum(rate(rag_api_errors_total{error_type=\"authentication\"}[5m]))"}]
+      },
+      {
+        "title": "授权失败统计",
+        "type": "stat",
+        "gridPos": {"x": 6, "y": 8, "w": 6, "h": 6},
+        "targets": [{"expr": "sum(rate(rag_api_errors_total{error_type=\"authorization\"}[5m]))"}]
+      },
+      {
+        "title": "403 错误趋势",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 8, "w": 12, "h": 6},
+        "targets": [{"expr": "sum(rate(rag_api_requests_total{status_code=\"403\"}[5m])) by (endpoint)", "legendFormat": "{{endpoint}}"}]
+      }
+    ]
+  }
+}

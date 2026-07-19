@@ -163,22 +163,47 @@ class Member7StandardQABridge:
         if "query" not in params and "question" in params:
             kwargs.pop("query", None)
             kwargs["question"] = question
-        if "db" in params:
-            if self.db_provider is None:
-                return StandardQAMatchResult(matched=False, reason="成员7匹配服务需要 db 会话")
-            kwargs["db"] = self.db_provider()
-        # 去掉服务端不认识的多余参数
+        # 去掉服务端不认识的多余参数（db 稍后注入）
         if params:
             kwargs = {k: v for k, v in kwargs.items() if k in params or any(
                 p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()
             )}
 
-        raw = _run_maybe_async(call(**kwargs))
+        needs_db = "db" in params
+        if needs_db:
+            raw = _run_maybe_async(self._call_with_db(call, kwargs))
+        else:
+            raw = _run_maybe_async(call(**kwargs))
         if isinstance(raw, StandardQAMatchResult):
             return raw
         if isinstance(raw, dict):
             return map_member7_response(raw)
         return StandardQAMatchResult(matched=False, reason="成员7返回类型无法识别")
+
+    async def _call_with_db(self, call: Any, kwargs: dict[str, Any]) -> Any:
+        """注入 AsyncSession：优先 db_provider，否则用 async_session_factory。"""
+        if self.db_provider is not None:
+            db = self.db_provider()
+            # 兼容 context manager / 直接返回 session
+            if hasattr(db, "__aenter__"):
+                async with db as session:
+                    kwargs = {**kwargs, "db": session}
+                    return await call(**kwargs)
+            kwargs = {**kwargs, "db": db}
+            try:
+                return await call(**kwargs)
+            finally:
+                close = getattr(db, "close", None)
+                if close is not None:
+                    maybe = close()
+                    if inspect.isawaitable(maybe):
+                        await maybe
+
+        from app.core.database import async_session_factory
+
+        async with async_session_factory() as session:
+            kwargs = {**kwargs, "db": session}
+            return await call(**kwargs)
 
 
 def create_standard_qa_matcher(
