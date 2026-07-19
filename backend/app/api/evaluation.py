@@ -7,6 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, s
 from app.core.dependencies import DBSession, RequiredAccess
 from app.core.logging import get_logger
 from app.core.responses import paginated_response, success_response
+from app.models.evaluation import EvalResult
 from app.schemas.evaluation import (
     DatasetQueryParams,
     EvalCaseBatchCreate,

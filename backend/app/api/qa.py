@@ -663,9 +663,9 @@ async def list_review_records(
 @router.post("/standard/{qa_id}/publish")
 async def publish_standard_qa(
     qa_id: str,
+    db: DBSession,
+    access: RequiredAccess,
     data: StandardQAPublishRequest | None = None,
-    db: DBSession = Depends(),
-    access: RequiredAccess = Depends(),
 ):
     """发布标准问答"""
     qa = await qa_service.publish_qa(
@@ -891,10 +891,10 @@ async def get_quality_check_result(
 
 @router.post("/internal/document-change")
 async def handle_document_change(
+    db: DBSession,
     event_type: str = Query(..., description="事件类型"),
     document_id: str = Query(..., description="文档 ID"),
     new_version: int = Query(default=1, description="新版本号"),
-    db: DBSession = Depends(),
 ):
     """
     处理文档版本变更（内部接口）
