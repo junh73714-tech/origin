@@ -28,6 +28,7 @@ wheels/
 
 # Unit test / coverage reports
 htmlcov/
+reports/
 .tox/
 .nox/
 .coverage
@@ -82,6 +83,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+package-lock.json
+pnpm-lock.yaml
 
 # Frontend build
 frontend/dist/

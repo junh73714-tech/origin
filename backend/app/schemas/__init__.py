@@ -23,16 +23,27 @@ from app.schemas.auth import (
     AccessTokenPayload,
 )
 from app.schemas.document import (
+    # 知识库
     KnowledgeBaseCreate,
     KnowledgeBaseUpdate,
     KnowledgeBaseResponse,
+    KnowledgeBaseDetailResponse,
+    KnowledgeBaseStatsResponse,
+    KnowledgeBasePermissionCreate,
+    KnowledgeBasePermissionResponse,
+    # 文档
     DocumentUploadResponse,
     DocumentResponse,
     DocumentDetailResponse,
+    # 版本
     DocumentVersionResponse,
+    # Chunk
     ChunkResponse,
-    ChunkPreviewResponse,
+    ChunkDetailResponse,
+    # 索引任务
     IndexTaskResponse,
+    IndexRebuildRequest,
+    ConsistencyCheckRequest,
 )
 from app.schemas.qa import (
     StandardQACreate,
@@ -78,13 +89,19 @@ __all__ = [
     "KnowledgeBaseCreate",
     "KnowledgeBaseUpdate",
     "KnowledgeBaseResponse",
+    "KnowledgeBaseDetailResponse",
+    "KnowledgeBaseStatsResponse",
+    "KnowledgeBasePermissionCreate",
+    "KnowledgeBasePermissionResponse",
     "DocumentUploadResponse",
     "DocumentResponse",
     "DocumentDetailResponse",
     "DocumentVersionResponse",
     "ChunkResponse",
-    "ChunkPreviewResponse",
+    "ChunkDetailResponse",
     "IndexTaskResponse",
+    "IndexRebuildRequest",
+    "ConsistencyCheckRequest",
     # QA
     "StandardQACreate",
     "StandardQAUpdate",

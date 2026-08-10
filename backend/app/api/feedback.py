@@ -5,6 +5,7 @@
 from fastapi import APIRouter
 
 router = APIRouter()
+feedback_router = router
 
 # TODO: 由成员7实现
 # - POST / - 提交反馈
